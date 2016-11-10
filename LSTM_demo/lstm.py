@@ -4,7 +4,6 @@ IMDB REVIEW SENTATMENT ANALYSIS LSTM DEMO
 import numpy as np
 from keras.models import Sequential
 from keras.layers import Dense
-from keras.layers import Dropout
 from keras.layers import LSTM
 from keras.layers.embeddings import Embedding
 from keras.preprocessing import sequence
