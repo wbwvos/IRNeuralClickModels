@@ -8,8 +8,13 @@ from keras.layers import LSTM
 from keras.layers.embeddings import Embedding
 from keras.preprocessing import sequence
 
+# workaround control_flow_ops
+import tensorflow as tf
+tf.python.control_flow_ops = tf
+
 # fix random seed for reproducibility
 np.random.seed(7)
+
 # import dataset
 from keras.datasets import imdb
 
@@ -23,11 +28,10 @@ top_words = 5000
 max_review_length = 500
 X_train = sequence.pad_sequences(X_train, maxlen=max_review_length)
 X_test = sequence.pad_sequences(X_test, maxlen=max_review_length)
-
 # DEFINE LSTM MODEL #####
 # create the model
-embedding_vector_length = 32
 # add embedding layer that represent words in vector of 32
+embedding_vector_length = 32
 model = Sequential()
 model.add(Embedding(top_words, embedding_vector_length,
                     input_length=max_review_length))
