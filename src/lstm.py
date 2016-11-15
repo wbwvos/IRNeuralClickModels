@@ -76,6 +76,10 @@ else:
 
 
 print('Evaluating')
-score = model.evaluate(x_val, y_val, batch_size=batch_size, verbose=1)
+score = model.evaluate(x_val, y_val, verbose=1)
 print('log likelihood:  ', score[0])
 print('Accuracy:        ', score[1])
+
+print('Predict example')
+predict = model.predict_classes(x_val)
+print(predict[8]
