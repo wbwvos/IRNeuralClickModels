@@ -7,9 +7,9 @@ serp_len = 10  # SERP contains 10 documents
 # function that initiates vector values
 def init_vectors():
     # query vector is zero vector of size 1
-    q = np.ones(1)
+    q = np.zeros(1)
     # user interaction at state 0 is empty
-    i = np.ones(1, dtype='int')
+    i = np.zeros(1, dtype='int')
     # document vector is empty before document
     # is examined
     d = np.zeros(10240)
@@ -41,6 +41,7 @@ for j in range(batch_size):
         labels[j, k] = interaction
         # update interaction
         i = interaction
+    labels[j,:] = np.reshape(np.array([1,1,1,0,0,0,0,0,0,0]), (10,1))
 
 np.save('data.npy', data)
 np.save('labels.npy', labels)
