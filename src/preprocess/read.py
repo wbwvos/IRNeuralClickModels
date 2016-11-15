@@ -1,7 +1,14 @@
 import itertools
 import pandas as pd
 import numpy as np
-import cPickle as pickle
+import marshal as pickle
+import json
+import progressbar
+import threading
+
+import sys
+
+import time
 
 TOTAL_LINE_NUMBERS = 164439537
 
@@ -19,12 +26,14 @@ def read_session(filename, first_line):
                 if l[2] == "Q":
                     # Save old query + click pattern
                     if len(click_pattern) > 0:
-                        query_dict[query_id] = \
-                            [{
-                                'click_pattern': click_pattern,
+                        if query_id not in query_dict.keys():
+                            query_dict[query_id] = []
+                        query_dict[query_id].append( \
+                            {
+                                'click_pattern': click_pattern.tolist(),
                                 'doc_ids': urls,
                                 'terms': terms,
-                            }]
+                            })
 
                     # Create new zero click pattern
                     query_id = l[4]
@@ -40,12 +49,14 @@ def read_session(filename, first_line):
                         click_pattern[position] = 1
                 elif l[1] == "M":
                     if len(click_pattern) > 0:
-                        query_dict[query_id] = \
-                            [{
-                                'click_pattern': click_pattern,
+                        if query_id not in query_dict.keys():
+                            query_dict[query_id] = []
+                        query_dict[query_id].append( \
+                            {
+                                'click_pattern': click_pattern.tolist(),
                                 'doc_ids': urls,
                                 'terms': terms,
-                            }]
+                            })
                     # print query_dict
                     return query_dict
 
@@ -85,15 +96,25 @@ def update_query_dict(query_dict, new_query_dict):
 
 
 def read_data(filename, indices):
+    print "Found " + str(len(indices)) + " sessions."
+    bar = progressbar.ProgressBar(maxval=len(indices),
+                                  widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
     query_dict = {}
+    my_lock = threading.Lock()
     # meta = []
     # cols = [str(list(i)) + '-' + str(j) for j in range(10) for i in list(itertools.product([0, 1], repeat=10))]
     # query_doc_data = pd.DataFrame(columns=[cols])
-    for index in indices:
-        query_dict = update_query_dict(query_dict, read_session(filename, index))
-    print query_dict
-    # meta = pd.DataFrame(meta)
-    # meta.columns = ["Day", "USERID"]
+    print "Starting reading datafile..."
+    for index in bar(indices):
+        new_query_dict = read_session(filename, index)
+        if new_query_dict is not None:
+            query_dict = update_query_dict(query_dict, new_query_dict)
+    print "Writing json file"
+    with open('query_dict.json', 'wb') as f:
+        json.dump(query_dict, f)
+        # print "Size: " + str(sys.getsizeof(query_dict))
+        # meta = pd.DataFrame(meta)
+        # meta.columns = ["Day", "USERID"]
 
 
 def find_indices(filename, limit=164439537):
@@ -108,9 +129,11 @@ def find_indices(filename, limit=164439537):
 
 
 if __name__ == "__main__":
-    with open('meta_indices_train.pickle', 'rb') as f:
+    print "Opening indices ... "
+    with open('meta_indices.pickle', 'rb') as f:
         indices = pickle.load(f)
-    read_data("../../data/train_10000.tab", indices=indices)
+    # print indices[0:len(indices)/10]
+    read_data("../../data/train", indices=indices[0:len(indices) / 100])
     # print indices
     # read_data('../../data/train_10000.tab', limit=10)
     # find_indices('../../data/train', limit=10)
