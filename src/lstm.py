@@ -1,41 +1,60 @@
+'''Example script showing how to use stateful RNNs
+to model long sequences efficiently.
 '''
-TOY DATA LSTM
-'''
-
+from __future__ import print_function
 import numpy as np
+import matplotlib.pyplot as plt
 from keras.models import Sequential
-from keras.layers import Dense
-from keras.layers import LSTM
+from keras.layers import Dense, LSTM, TimeDistributed
+import time
+import os.path
+import pickle
+# since we are using stateful rnn tsteps can be set to 1
 
-# workaround control_flow_ops
-import tensorflow as tf
-tf.python.control_flow_ops = tf
+tsteps = 1
+batch_size = 64
+epochs = 300
+serp_len = 10
+inputs = 10242
+num_hidden = 256
+output = 1
+# number of elements ahead that are used to make the prediction
+x_train_e = np.load('data.npy')
+y_train_e = np.load('labels.npy')
+#y_train_e = np.reshape(y_train_e, (batch_size, serp_len))
 
-# fix random seed for reproducibility
-np.random.seed(7)
+print(x_train_e.shape, y_train_e.shape)
 
-
-def load_data():
-    # import dataset
-    data = np.load('data.npy')
-    labels = np.load('labels.npy')
-    return (data[:-1, :], data[-1, :])
-
-# load data
-(train_X, train_y) = load_data()
-print('Loaded data!')
-print('Train data shape: ({0},{1})').format(str(train_X.shape),
-                                            str(train_y.shape))
-
-# DEFINE LSTM MODEL #
-# create model
+print('Creating Model')
 model = Sequential()
-model.add(LSTM(256, input_shape=train_X.shape[1:]))
-model.add(Dense(1, activation='sigmoid'))
-model.compile(loss='binary_crossentropy', optimizer='adam',
-              metrics=['accuracy'])
-# show model
-print model.summary()
+model.add(TimeDistributed(Dense(num_hidden), input_shape=(serp_len, inputs)))
+model.add(LSTM(num_hidden, return_sequences=True))
+model.add(TimeDistributed(Dense(1)))
+model.compile(loss='mse', optimizer='rmsprop')
+model.summary()
+weights_filename = 'weights.dat'
 
-# train model
-model.fit(train_X, train_y, nb_epoch=3)
+if os.path.isfile(weights_filename):
+    print('Loading the model...')
+    model.load_weights(weights_filename)
+else:
+    print('Training the model...')
+    trainStart = time.time()
+    for i in range(epochs):
+        print('Epoch', i+1, '/', epochs)
+        model.fit(x_train_e,
+                  y_train_e,
+                  batch_size=4,
+                  verbose=1,
+                  nb_epoch=1,
+                  shuffle=False)
+        model.reset_states()
+    trainEnd = time.time()
+    print('Trained the model in', trainEnd - trainStart, 'seconds')
+    print('Saving the model...')
+    model.save_weights(weights_filename, True)
+
+
+print('Predicting')
+predicted = model.predict(x_train_e, batch_size=batch_size, verbose=True)
+print(predicted)
