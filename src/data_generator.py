@@ -1,36 +1,46 @@
 import numpy as np
-import cPickle
 
 batch_size = 64
-serp_len = 10 # SERP contains 10 documents
+serp_len = 10  # SERP contains 10 documents
 
 
-# function that creates data example
-def create_example(q, prev_i):
-    # create document vector d
-    d = np.round(np.maximum(0, 2.*np.random.randn(10240)))
-    # create interaction vector i
-    i = np.random.choice(2, p=(0.75, 0.25))
-    return np.append(np.append(q, d), np.append(prev_i, i)).T
+# function that initiates vector values
+def init_vectors():
+    # query vector is zero vector of size 1
+    q = np.ones(1)
+    # user interaction at state 0 is empty
+    i = np.ones(1, dtype='int')
+    # document vector is empty before document
+    # is examined
+    d = np.zeros(10240)
+    return (q, i, d)
 
+# init data list
+data = np.zeros((batch_size, serp_len, 10242))
+labels = np.zeros((batch_size, serp_len, 1))
 
-def create_serp(serp_len):
-    q = 0
-    i = 0
-    serp = np.zeros((serp_len, 10243))
-    for j in range(serp_len):
-        example = create_example(q, i)
-        i = example[-1]
-        serp[j, :] = example
-    return serp
+# init vectors (state0)
+(q, i, d) = init_vectors()
 
+# fill batch
+for j in range(batch_size):
+    # fill serp
+    for k in range(serp_len):
+        # create dummy document vector
+        d = np.round(np.maximum(0, .5*np.random.randn(d.shape[0])))
+        # create dummy interaction
+        interaction = np.array([np.random.choice(2, p=(.75, .25))])
+        # concat vectors
+        state_vec = np.zeros(10242)
+        state_vec[0] = q
+        state_vec[1] = i
+        state_vec[2:] = d
+        # fill data
+        data[j, k, :] = state_vec
+        # fill label
+        labels[j, k] = interaction
+        # update interaction
+        i = interaction
 
-def create_batch(batch_size, serp_len):
-    batch = np.zeros((batch_size, serp_len, 10243))
-    for j in range(batch_size):
-        serp = create_serp(serp_len)
-        batch[j, :, :] = serp
-    return batch
-
-batch = create_batch(batch_size, serp_len)
-np.save('batch.npy', batch)
+np.save('data.npy', data)
+np.save('labels.npy', labels)

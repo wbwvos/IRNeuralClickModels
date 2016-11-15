@@ -1,6 +1,0 @@
-Ideas for LSTM implementation:
--Create dummy data by generating SERPs and corresponding labels
-SERP: random list of document ids
-Label: random click log of SERP
--Implement model from paper using Keras
-check LSTM demo for inspiration
