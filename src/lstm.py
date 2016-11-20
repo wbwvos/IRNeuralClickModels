@@ -1,6 +1,3 @@
-'''Example script showing how to use stateful RNNs
-to model long sequences efficiently.
-'''
 from __future__ import print_function
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,7 +9,8 @@ import os.path
 import cPickle as pickle
 from scipy.sparse import coo_matrix
 
-# since we are using stateful rnn tsteps can be set to 1
+
+
 
 tsteps = 1
 batch_size = 64
@@ -21,9 +19,6 @@ serp_len = 10
 inputs = 10242
 num_hidden = 256
 output = 1
-# number of elements ahead that are used to make the prediction
-#x_train = np.load('data.npy')
-#y_train = np.load('labels.npy')
 
 with open('data_list.cpickle', 'rb') as f:
     data = pickle.load(f)
@@ -82,4 +77,15 @@ print('Accuracy:        ', score[1])
 
 print('Predict example')
 predict = model.predict_classes(x_val)
-print(predict[8]
+print(predict[8])
+
+
+#def perplexity(y_true, y_pred, mask=None):
+#    if mask is not None:
+#        y_pred /= K.sum(y_pred, axis=-1, keepdims=True)
+#        mask = K.permute_dimensions(K.reshape(mask, y_true.shape[:-1]), (0, 1, 'x'))
+#        truth_mask = K.flatten(y_true*mask).nonzero()[0]  ### How do you do this on tensorflow?
+#        predictions = K.gather(y_pred.flatten(), truth_mask)
+#        return K.pow(2, K.mean(-K.log2(predictions)))
+#    else:
+#        return K
