@@ -21,7 +21,7 @@ def get_click_pattern_from_index(index):
 
 if __name__ == "__main__":
     print "Opening dict ... "
-    with open('query_dict_10000.json', 'rb') as f:
+    with open('query_dict.json', 'rb') as f:
         query_dict = json.load(f)
     dataset = {}
     datalist = []
@@ -49,7 +49,7 @@ if __name__ == "__main__":
             query_data.append(serp_data)
         dataset[query] = query_data
     print "Saving pickle files..."
-    with open('data_list.cpickle', 'wb') as f:
+    with open('data_list_1percent.cpickle', 'wb') as f:
         pickle.dump(datalist, f)
-    with open('data_per_query.cpickle', 'wb') as f:
+    with open('data_per_query_1percent.cpickle', 'wb') as f:
         pickle.dump(dataset, f)
