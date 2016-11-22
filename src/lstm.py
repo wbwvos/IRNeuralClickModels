@@ -13,27 +13,48 @@ from scipy.sparse import coo_matrix
 
 
 tsteps = 1
-batch_size = 64
-epochs = 200
+batch_size = 16
+epochs = 50
 serp_len = 10
 inputs = 10242
 num_hidden = 256
 output = 1
+train_batch_size = 128
+val_set_size = 32
 
 with open('data_list.cpickle', 'rb') as f:
     data = pickle.load(f)
 
-x_data = np.zeros((395, 10, 10242))
-y_data = np.zeros((395, 10, 1))
-for i, d in enumerate(data):
-    matrix = d.todense()
-    x_data[i, :, 1:] = matrix[:, :-1]
-    y_data[i, :] = matrix[:, -1]
+def next_batch(data, train_batch_size, val_set_size):
+    x_data = np.zeros((train_batch_size, 10, 10242))
+    y_data = np.zeros((train_batch_size, 10, 1))
+    for i, j in enumerate(np.random.choice(len(data)-(val_set_size*2), train_batch_size, replace=False)):
+        matrix = data[j].todense()
+        x_data[i, :, 1:] = matrix[:, :-1]
+        y_data[i, :] = matrix[:, -1]
+    return x_data, y_data
 
-x_train = x_data[:300, :, :]
-y_train = y_data[:300, :, :]
-x_val = x_data[300:, :, :]
-y_val = y_data[300:, :, :]
+def val_set(data, val_set_size):
+    x_data = np.zeros((val_set_size, 10, 10242))
+    y_data = np.zeros((val_set_size, 10, 1))
+    for i, j in enumerate(xrange(len(data)-(val_set_size*2), len(data)-val_set_size)):
+        matrix = data[j].todense()
+        x_data[i, :, 1:] = matrix[:, :-1]
+        y_data[i, :] = matrix[:, -1]
+    return x_data, y_data
+
+def test_set(data, val_set_size):
+    x_data = np.zeros((val_set_size, 10, 10242))
+    y_data = np.zeros((val_set_size, 10, 1))
+    for i, j in enumerate(xrange(len(data)-val_set_size, len(data))):
+        matrix = data[j].todense()
+        x_data[i, :, 1:] = matrix[:, :-1]
+        y_data[i, :] = matrix[:, -1]
+    return x_data, y_data
+
+x_train, y_train = next_batch(data, train_batch_size, val_set_size)
+x_val, y_val = val_set(data, val_set_size)
+x_test, y_test = test_set(data, val_set_size)
 
 print('x_train:', x_train.shape)
 print('y_train:', y_train.shape)
@@ -57,9 +78,11 @@ else:
     trainStart = time.time()
     for i in range(epochs):
         print('Epoch', i+1, '/', epochs)
-        model.fit(x_train,
-                  y_train,
-                  batch_size=64,
+        x_train_batch, y_train_batch = next_batch(data, train_batch_size, val_set_size)
+        model.fit(x_train_batch,
+                  y_train_batch,
+                  validation_data=(x_val, y_val),
+                  batch_size=batch_size,
                   verbose=1,
                   nb_epoch=1,
                   shuffle=True)
@@ -71,14 +94,18 @@ else:
 
 
 print('Evaluating')
-score = model.evaluate(x_val, y_val, verbose=1)
+score = model.evaluate(x_test, y_test, verbose=1)
 print('log likelihood:  ', score[0])
 print('Accuracy:        ', score[1])
 
 print('Predict example')
-predict = model.predict_classes(x_val)
+predict = model.predict_classes(x_test)
 print(predict[8])
 
+print(np.sum(predict))
+print(predict.shape)
+print(np.sum(y_test))
+print(y_test.shape)
 
 #def perplexity(y_true, y_pred, mask=None):
 #    if mask is not None:
