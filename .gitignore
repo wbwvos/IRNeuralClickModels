@@ -90,3 +90,12 @@ ENV/
 
 # The contents of the data folder
 data/
+
+# Pickle, Cpickle, JSON
+*.pickle
+*.cpickle
+*.json
+
+# IntelliJ
+*.idea
+*.csv
