@@ -3,6 +3,8 @@ import cPickle as pickle
 
 import progressbar
 import json
+
+import time
 from scipy.sparse import coo_matrix
 
 
@@ -23,6 +25,7 @@ def get_click_pattern_from_index(index):
 
 
 if __name__ == "__main__":
+    start_time = time.time()
     print "Opening dict ... "
     with open('train_100000_read.cpickle', 'rb') as f:
         query_list = pickle.load(f)
@@ -71,3 +74,4 @@ if __name__ == "__main__":
         json.dump(queries, f3)
     with open('docs_100000.json', 'w') as f4:
         json.dump(docs, f4)
+    print "\nTime elapsed: " + str(time.time() - start_time)
