@@ -3,8 +3,11 @@ import pprint
 from scipy.sparse import csr_matrix
 
 
-class SparseMatrixFromQueryDict:
-    def __init__(self, qeuery_dict):
+class SparseMatrixGenerator:
+    def __init__(self, fname='query_docs_queries_docs_100000.json'):
+        with open(fname, 'r') as f:
+            data = json.load(f)
+        query_dict = data.pop('query_dict')
         self.serps = qeuery_dict.pop('serps')
         self.doc_indices = {}
         for doc_id, indices in qeuery_dict.iteritems():
@@ -25,7 +28,7 @@ class SparseMatrixFromQueryDict:
             data.extend(index_counts.values())
             cols.extend(index_counts.keys())
             rows.extend([row] * len(index_counts.keys()))
-        return csr_matrix((data, (rows, cols)), shape=(3, 3))  # TODO: right shapes
+        return csr_matrix((data, (rows, cols)), shape=(10, 10241))  # TODO: right shapes
         # TODO: append, set 2 & 3, append click_pattern as interacction
 
 
@@ -34,5 +37,5 @@ with open("query_docs_100000.json", 'r') as f:
 
 pprint.pprint(query_dict['20369649'])
 
-sparseMatrixGenerator = SparseMatrixFromQueryDict(query_dict['20369649'])
+sparseMatrixGenerator = SparseMatrixGenerator(query_dict['20369649'])
 print sparseMatrixGenerator.get_sparse_matrices()

@@ -68,10 +68,16 @@ if __name__ == "__main__":
             docs[doc_id] = l
 
         query_docs[query['query_id']] = query_doc
-    with open('query_docs_100000.json', 'w') as f2:
-        json.dump(query_docs, f2)
-    with open('query_100000.json', 'w') as f3:
-        json.dump(queries, f3)
-    with open('docs_100000.json', 'w') as f4:
-        json.dump(docs, f4)
+    with open('query_docs_queries_docs_100000.json', 'w') as f2:
+        json.dump({
+            'query_docs': query_docs,
+            'queries': queries,
+            'docs': docs,
+        }, f2)
+    # with open('query_docs_100000.json', 'w') as f2:
+    #     json.dump(query_docs, f2)
+    # with open('query_100000.json', 'w') as f3:
+    #     json.dump(queries, f3)
+    # with open('docs_100000.json', 'w') as f4:
+    #     json.dump(docs, f4)
     print "\nTime elapsed: " + str(time.time() - start_time)
