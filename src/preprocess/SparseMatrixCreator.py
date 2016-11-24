@@ -43,11 +43,9 @@ class SparseMatrixGenerator:
             data.extend(index_counts.values())
             cols.extend(index_counts.keys())
             rows.extend([row] * len(index_counts.keys()))
-        print data
-        print rows
-        print cols
-        return csr_matrix((data, (rows, cols)), shape=(10, 10241))  # TODO: right shapes
+
         # TODO: append, set 2 & 3, append click_pattern as interacction
+        return csr_matrix((data, (rows, cols)), shape=(10, 10241))  # TODO: right shapes
 
 
 # with open("query_docs_100000.json", 'r') as f:
