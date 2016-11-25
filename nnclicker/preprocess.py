@@ -142,14 +142,13 @@ class NNclickParser(object):
 
 if __name__ == "__main__":
     parser = NNclickParser()
-    data_dir = "data/"
-    file_name = "train"
-    ses_name = "train_0-100.pickle"
-    query_name = "query_docs_0-100.pickle"
+    datafile_name = "../data/train"
+    ses_name = "../data/train_0-100.pickle"
+    query_name = "../data/query_docs_0-100.pickle"
 
     if not parser.sessions:
         if not os.path.isfile(ses_name):
-            parser.parse(data_dir+file_name, session_start=0,
+            parser.parse(datafile_name, session_start=0,
                          sessions_max=100)
             parser.write_sessions(ses_name)
         else:
