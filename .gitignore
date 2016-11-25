@@ -99,3 +99,6 @@ data/
 # IntelliJ
 *.idea
 *.csv
+
+# MAC
+*.DS_STORE
