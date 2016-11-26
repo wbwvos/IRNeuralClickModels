@@ -3,7 +3,8 @@ import sys
 import os.path
 import cPickle as pickle
 
-from utils import get_index_from_click_pattern
+from Utils import get_index_from_click_pattern
+from SparseMatrixCreator import SparseMatrixGenerator
 
 __author__ = 'Wolf Vos, Casper Thuis, Alexander van Someren, Jeroen Rooijmans'
 
@@ -14,6 +15,7 @@ class NNclickParser(object):
     Web Search Challenge from Kaggle.
     (https://www.kaggle.com/c/yandex-personalized-web-search-challenge)
     """
+
     def __init__(self):
         self.TOTAL_NUMBER_OF_QUERIES = 65172853
         self.sessions = None
@@ -55,7 +57,7 @@ class NNclickParser(object):
 
             # check if line is query action
             if len(entry_array) >= 6 and entry_array[2] == "Q":
-                click_pattern = 10*[0]
+                click_pattern = 10 * [0]
                 session_id = entry_array[0]
                 query_id = entry_array[4]
                 doc_urls = [comb.split(",")[0] for comb in entry_array[6::]]
@@ -120,10 +122,10 @@ class NNclickParser(object):
             l.append(get_index_from_click_pattern(query["click_pattern"]))
             queries[query["query_id"]] = l
 
-            indices = 10*[0]
+            indices = 10 * [0]
             for (doc_location, doc_id) in enumerate(query["doc_urls"]):
                 index = get_index_from_click_pattern(query["click_pattern"],
-                                                     doc_location+1)
+                                                     doc_location + 1)
                 indices[doc_location] = index
 
                 # append index to query-document representation
@@ -160,3 +162,14 @@ if __name__ == "__main__":
     if not parser.query_docs:
         parser.create_data_dicts()
         parser.write_query_docs(query_name)
+
+    sparseMatrixGenerator = SparseMatrixGenerator()
+
+    with open(query_name, 'r') as f:
+        data = pickle.load(f)
+
+    sparse_matrices = []
+    for query in (data['queries'].keys()):
+        sparse_matrices.extend(sparseMatrixGenerator.get_sparse_matrices(query_id=query, representation_set='1'))
+
+        # write sparse_matrices to file
