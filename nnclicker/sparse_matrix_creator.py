@@ -1,5 +1,4 @@
 import json
-import time
 from scipy.sparse import csr_matrix
 
 
@@ -25,9 +24,13 @@ class SparseMatrixGenerator:
         # del query_dict
 
     def get_sparse_matrices(self, query_id='20369649'):
+        """
+        Returns a list of sparse matrices (one for each serp within the query id)
+        :param query_id:
+        :return list of sparse matrices:
+        """
         sparse_matrices = []
         query_dict = self.query_dicts[query_id]
-        print query_dict.keys()
         serps = query_dict.pop('serps')
         doc_indices = query_dict
 
@@ -37,49 +40,59 @@ class SparseMatrixGenerator:
             q_indices = [val + 10240 for val in self.queries[query_id]]
 
         for serp in serps:
-            sparse_matrices.append(self.get_sparse_matrix_from_serp(serp, doc_indices))
+            sparse_matrices.append(self.get_sparse_matrix_from_serp(serp, doc_indices, q_indices))
         return sparse_matrices
 
-    def get_sparse_matrix_from_serp(self, serp, doc_indices):
+    def get_sparse_matrix_from_serp(self, serp, doc_indices, q_indices):
         data = []
         rows = []
         cols = []
 
-        if self.representation_set == '2':
-            #
-            pass
+        # Append q indices for set 2
+        if self.representation_set != '1':
+            q_index_counts = {index: q_indices.count(index) for index in q_indices}
+            data.extend(q_index_counts.values() * 10)
+            cols.extend(q_index_counts.keys() * 10)
+            rows.extend([j for j in range(10) for i in range(len(q_index_counts))])
 
-        elif self.representation_set == '3':
-            # create set 2
-            pass
-
+        # Append qd vector indices and d indices for set 3
         for row, doc_id in enumerate(serp['doc_ids']):
+            if self.representation_set == '3':
+                doc_indices.extend([val + 10240 + 1024 for val in self.docs[doc_id]])
             index_counts = {index: doc_indices[doc_id].count(index) for index in doc_indices[doc_id]}
             data.extend(index_counts.values())
             cols.extend(index_counts.keys())
             rows.extend([row] * len(index_counts.keys()))
 
-        # TODO: append, set 2 & 3
+        # Append interaction and label indices
+        if self.representation_set == '1':
+            interaction_index = 10240
+        if self.representation_set == '2':
+            interaction_index = 10240 + 1024
+        if self.representation_set == '3':
+            interaction_index = 10240 + 1024 + 10240
 
+        interaction_row_indices = [i for i, j in enumerate(serp['click_pattern']) if j == 1]
+        rows.extend(interaction_row_indices)
+        data.extend([1] * len(interaction_row_indices))
+        cols.extend([interaction_index] * len(interaction_row_indices))
 
+        label_row_indices = [i for i, j in enumerate([0] + serp['click_pattern'][:-1]) if j == 1]
+        rows.extend(label_row_indices)
+        data.extend([1] * len(label_row_indices))
+        cols.extend([interaction_index + 1] * len(label_row_indices))
 
+        return csr_matrix((data, (rows, cols)), shape=(10, interaction_index + 2))
 
-        # TODO: append click_pattern as interacction
-        return csr_matrix((data, (rows, cols)), shape=(10, 10241))  # TODO: right shapes
+# sparseMatrixGenerator = SparseMatrixGenerator()
+#
+# with open('query_docs_queries_docs_100000.json', 'r') as f:
+#     data = json.load(f)
 
+# print sparseMatrixGenerator.get_sparse_matrices()
 
-# with open("query_docs_100000.json", 'r') as f:
-#     query_dict = json.load(f)
-
-# pprint.pprint(query_dict['20369649'])
-
-sparseMatrixGenerator = SparseMatrixGenerator()
-
-with open('query_docs_queries_docs_100000.json', 'r') as f:
-    data = json.load(f)
-
-start_time = time.time()
-for query in (data['queries'].keys()):
-    sparseMatrixGenerator.get_sparse_matrices(query_id=query)
-
-print "\nTime elapsed: " + str(time.time() - start_time)
+# start_time = time.time()
+# for query in (data['queries'].keys()):
+#     sparseMatrixGenerator.get_sparse_matrices(query_id=query)
+#
+# print "\nTime elapsed: " + str(time.time() - start_time)
