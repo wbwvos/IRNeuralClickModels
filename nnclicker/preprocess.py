@@ -122,7 +122,7 @@ class NNclickParser(object):
 
         for query in self.sessions:
             query_doc = query_docs.get(query["query_id"], {})
-            serps = query_docs.get("serps", [])
+            serps = query_doc.get("serps", [])
             serps.append({
                 "doc_ids": query["doc_urls"],
                 "click_pattern": query["click_pattern"]

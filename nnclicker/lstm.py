@@ -10,24 +10,23 @@ __author__ = 'Wolf Vos, Casper Thuis, Alexander van Someren, Jeroen Rooijmans'
 
 tsteps = 1
 batch_size = 16
-epochs = 50
+epochs = 2
 serp_len = 10
 inputs = 10242
 num_hidden = 256
 output = 1
-train_batch_size = 128
-val_set_size = 32
+train_batch_size = 6000
+val_set_size = 100
 
-with open('../data/data_list.cpickle', 'rb') as f:
+with open('../data/sparse_matrix_set1_train_0-10000.pickle', 'rb') as f:
     data = pickle.load(f)
-    for dp in data:
-        print dp
 
 
 def next_batch(data, train_batch_size, val_set_size):
     x_data = np.zeros((train_batch_size, 10, 10242))
     y_data = np.zeros((train_batch_size, 10, 1))
-    for i, j in enumerate(np.random.choice(len(data)-(val_set_size*2), train_batch_size, replace=False)):
+    for i, j in enumerate(np.random.choice(len(data)-(val_set_size*2),
+                                           train_batch_size, replace=False)):
         matrix = data[j].todense()
         x_data[i, :, 1:] = matrix[:, :-1]
         y_data[i, :] = matrix[:, -1]
@@ -37,7 +36,8 @@ def next_batch(data, train_batch_size, val_set_size):
 def val_set(data, val_set_size):
     x_data = np.zeros((val_set_size, 10, 10242))
     y_data = np.zeros((val_set_size, 10, 1))
-    for i, j in enumerate(xrange(len(data)-(val_set_size*2), len(data)-val_set_size)):
+    for i, j in enumerate(xrange(len(data)-(val_set_size*2),
+                                 len(data)-val_set_size)):
         matrix = data[j].todense()
         x_data[i, :, 1:] = matrix[:, :-1]
         y_data[i, :] = matrix[:, -1]
@@ -61,13 +61,16 @@ print('x_train:', x_train.shape)
 print('y_train:', y_train.shape)
 print('x_val:', x_val.shape)
 print('y_val:', y_val.shape)
+print('x_test:', x_test.shape)
+print('y_test:', y_test.shape)
 
 print('Creating Model')
 model = Sequential()
 model.add(TimeDistributed(Dense(num_hidden), input_shape=(serp_len, inputs)))
 model.add(LSTM(num_hidden, return_sequences=True))
 model.add(TimeDistributed(Dense(1, activation='sigmoid')))
-model.compile(optimizer='rmsprop', loss='binary_crossentropy', metrics=['accuracy'])
+model.compile(optimizer='rmsprop', loss='binary_crossentropy',
+              metrics=['accuracy'])
 model.summary()
 weights_filename = 'weights.dat'
 
@@ -79,7 +82,8 @@ else:
     trainStart = time.time()
     for i in range(epochs):
         print('Epoch', i+1, '/', epochs)
-        x_train_batch, y_train_batch = next_batch(data, train_batch_size, val_set_size)
+        x_train_batch, y_train_batch = next_batch(data, train_batch_size,
+                                                  val_set_size)
         model.fit(x_train_batch,
                   y_train_batch,
                   validation_data=(x_val, y_val),
@@ -87,7 +91,7 @@ else:
                   verbose=1,
                   nb_epoch=1,
                   shuffle=True)
-        #model.reset_states()
+        # model.reset_states()
     trainEnd = time.time()
     print('Trained the model in', trainEnd - trainStart, 'seconds')
     print('Saving the model...')
@@ -108,10 +112,10 @@ print(predict.shape)
 print(np.sum(y_test))
 print(y_test.shape)
 
-#def perplexity(y_true, y_pred, mask=None):
+# def perplexity(y_true, y_pred, mask=None):
 #    if mask is not None:
 #        y_pred /= K.sum(y_pred, axis=-1, keepdims=True)
-#        mask = K.permute_dimensions(K.reshape(mask, y_true.shape[:-1]), (0, 1, 'x'))
+#        mask = K.permute_dimensions(K.reshape(mask, y_true.shape[:-1]), (0, 1,'x'))
 #        truth_mask = K.flatten(y_true*mask).nonzero()[0]  ### How do you do this on tensorflow?
 #        predictions = K.gather(y_pred.flatten(), truth_mask)
 #        return K.pow(2, K.mean(-K.log2(predictions)))
