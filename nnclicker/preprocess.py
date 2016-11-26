@@ -18,6 +18,8 @@ class NNclickParser(object):
         self.TOTAL_NUMBER_OF_QUERIES = 65172853
         self.sessions = None
         self.query_docs = None
+        self.queries = None
+        self.docs = None
 
     def parse(self, session_filename, sessions_start=None, sessions_max=None):
         """
@@ -87,7 +89,10 @@ class NNclickParser(object):
         Function that writes query doc dicts to pickle file
         """
         with open(filename, "w") as f:
-            pickle.dump(self.query_docs, f)
+            pickle.dump({
+                'query_docs': self.query_docs,
+                'queries': self.queries,
+                'docs': self.docs}, f)
 
     def load_sessions(self, filename):
         """
@@ -147,3 +152,5 @@ class NNclickParser(object):
 
             query_docs[query["query_id"]] = query_doc
         self.query_docs = query_docs
+        self.queries = queries
+        self.docs = docs

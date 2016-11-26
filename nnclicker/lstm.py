@@ -18,9 +18,10 @@ output = 1
 train_batch_size = 128
 val_set_size = 32
 
-with open('data_list.cpickle', 'rb') as f:
+with open('../data/data_list.cpickle', 'rb') as f:
     data = pickle.load(f)
-    print data[0]
+    for dp in data:
+        print dp
 
 
 def next_batch(data, train_batch_size, val_set_size):

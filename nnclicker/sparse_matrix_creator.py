@@ -6,7 +6,7 @@ __author__ = 'Wolf Vos, Casper Thuis, Alexander van Someren, Jeroen Rooijmans'
 
 
 class SparseMatrixGenerator:
-    def __init__(self, fname='query_docs_queries_docs_100000.json'):
+    def __init__(self, fname):
 
         # Open the json file
         with open(fname, 'r') as f:
@@ -89,5 +89,5 @@ class SparseMatrixGenerator:
         sparse_matrices = []
         for query_id in self.queries.keys():
             sparse_matrices.extend(self.get_sparse_matrices(query_id, representation_set))
-        with open(fname, 'r') as f:
+        with open(fname, 'w') as f:
             pickle.dump(sparse_matrices, f)
