@@ -3,7 +3,7 @@ import sys
 import os.path
 import cPickle as pickle
 
-from Utils import get_index_from_click_pattern
+from utils import get_index_from_click_pattern
 from SparseMatrixCreator import SparseMatrixGenerator
 
 __author__ = 'Wolf Vos, Casper Thuis, Alexander van Someren, Jeroen Rooijmans'
