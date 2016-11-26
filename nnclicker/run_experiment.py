@@ -23,7 +23,7 @@ def run_experiment():
 
     # params
     sessions_start = 0
-    sessions_max = 100000
+    sessions_max = 10000
     repr_set = "1"
 
     if len(sys.argv) >= 3:

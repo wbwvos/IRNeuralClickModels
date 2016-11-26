@@ -10,13 +10,13 @@ __author__ = 'Wolf Vos, Casper Thuis, Alexander van Someren, Jeroen Rooijmans'
 
 tsteps = 1
 batch_size = 16
-epochs = 2
+epochs = 3
 serp_len = 10
 inputs = 10242
 num_hidden = 256
 output = 1
 train_batch_size = 6000
-val_set_size = 100
+val_set_size = 1000
 
 with open('../data/sparse_matrix_set1_train_0-10000.pickle', 'rb') as f:
     data = pickle.load(f)

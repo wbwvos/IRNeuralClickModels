@@ -43,9 +43,6 @@ class SparseMatrixGenerator:
         for serp in serps:
             serp_count += 1
             sparse_matrices.append(self.get_sparse_matrix_from_serp(serp, doc_indices, q_indices, representation_set))
-        if serp_count > 1:
-            print serp_count
-            print "------------------"
         return sparse_matrices
 
     def get_sparse_matrix_from_serp(self, serp, doc_indices, q_indices, representation_set):
