@@ -37,10 +37,10 @@ class SparseMatrixGenerator:
             q_indices = [val + 10240 for val in self.queries[query_id]]
 
         for serp in serps:
-            sparse_matrices.append(self.get_sparse_matrix_from_serp(serp, doc_indices, q_indices))
+            sparse_matrices.append(self.get_sparse_matrix_from_serp(serp, doc_indices))
         return sparse_matrices
 
-    def get_sparse_matrix_from_serp(self, serp, doc_indices, q_indices):
+    def get_sparse_matrix_from_serp(self, serp, doc_indices):
         data = []
         rows = []
         cols = []
