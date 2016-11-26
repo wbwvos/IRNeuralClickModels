@@ -1,10 +1,8 @@
 #!/usr/bin/env python
-import sys
 import os.path
 import cPickle as pickle
 
 from utils import get_index_from_click_pattern
-from sparse_matrix_creator import SparseMatrixGenerator
 
 __author__ = 'Wolf Vos, Casper Thuis, Alexander van Someren, Jeroen Rooijmans'
 
@@ -21,7 +19,7 @@ class NNclickParser(object):
         self.sessions = None
         self.query_docs = None
 
-    def parse(self, session_filename, session_start=None, sessions_max=None):
+    def parse(self, session_filename, sessions_start=None, sessions_max=None):
         """
         Function that parses a file containing search sessions,
         formatted according to the Yandex Personalized Web Seach Database
@@ -52,7 +50,7 @@ class NNclickParser(object):
             entry_array = line.strip().split("\t")
 
             # continue until session_start is reached
-            if session_start > int(entry_array[0]):
+            if sessions_start > int(entry_array[0]):
                 continue
 
             # check if line is query action
@@ -100,6 +98,15 @@ class NNclickParser(object):
                 sessions = pickle.load(f)
                 self.sessions = sessions
 
+    def load_query_docs(self, filename):
+        """
+        Function that loads dics with query documents from pickle file
+        """
+        if os.path.isfile(filename):
+            with open(filename, "rb") as f:
+                query_docs = pickle.load(f)
+                self.query_docs = query_docs
+
     def create_data_dicts(self):
         """
         Function that creates dictionaries to store the preprocessed data
@@ -140,36 +147,3 @@ class NNclickParser(object):
 
             query_docs[query["query_id"]] = query_doc
         self.query_docs = query_docs
-
-
-if __name__ == "__main__":
-    parser = NNclickParser()
-    datafile_name = "../data/train"
-    ses_name = "../data/train_0-100.pickle"
-    query_name = "../data/query_docs_0-100.pickle"
-
-    if not parser.sessions:
-        if not os.path.isfile(ses_name):
-            parser.parse(datafile_name, session_start=0,
-                         sessions_max=100)
-            parser.write_sessions(ses_name)
-        else:
-            parser.load_sessions(ses_name)
-    if not parser.sessions:
-        print("Error: error loading search session file")
-        sys.exit()
-
-    if not parser.query_docs:
-        parser.create_data_dicts()
-        parser.write_query_docs(query_name)
-
-    sparseMatrixGenerator = SparseMatrixGenerator()
-
-    with open(query_name, 'r') as f:
-        data = pickle.load(f)
-
-    sparse_matrices = []
-    for query in (data['queries'].keys()):
-        sparse_matrices.extend(sparseMatrixGenerator.get_sparse_matrices(query_id=query, representation_set='1'))
-
-        # write sparse_matrices to file

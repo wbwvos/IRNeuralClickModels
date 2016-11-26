@@ -1,9 +1,12 @@
-import json
+#!/usr/bin/env python
+import cPickle as pickle
 from scipy.sparse import csr_matrix
+
+__author__ = 'Wolf Vos, Casper Thuis, Alexander van Someren, Jeroen Rooijmans'
 
 
 class SparseMatrixGenerator:
-    def __init__(self, representation_set='1', fname='query_docs_queries_docs_100000.json'):
+    def __init__(self, representation_set='1', fname):
 
         # Open the json file
         with open(fname, 'r') as f:
@@ -83,16 +86,3 @@ class SparseMatrixGenerator:
         cols.extend([interaction_index + 1] * len(label_row_indices))
 
         return csr_matrix((data, (rows, cols)), shape=(10, interaction_index + 2))
-
-# sparseMatrixGenerator = SparseMatrixGenerator()
-#
-# with open('query_docs_queries_docs_100000.json', 'r') as f:
-#     data = json.load(f)
-
-# print sparseMatrixGenerator.get_sparse_matrices()
-
-# start_time = time.time()
-# for query in (data['queries'].keys()):
-#     sparseMatrixGenerator.get_sparse_matrices(query_id=query)
-#
-# print "\nTime elapsed: " + str(time.time() - start_time)
