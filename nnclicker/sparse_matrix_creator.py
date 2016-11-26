@@ -39,9 +39,13 @@ class SparseMatrixGenerator:
         if representation_set != '1':
             # add q vector to indices
             q_indices = [val + 10240 for val in self.queries[query_id]]
-
+        serp_count = 0
         for serp in serps:
+            serp_count += 1
             sparse_matrices.append(self.get_sparse_matrix_from_serp(serp, doc_indices, q_indices, representation_set))
+        if serp_count > 1:
+            print serp_count
+            print "------------------"
         return sparse_matrices
 
     def get_sparse_matrix_from_serp(self, serp, doc_indices, q_indices, representation_set):
@@ -73,12 +77,12 @@ class SparseMatrixGenerator:
         if representation_set == '3':
             interaction_index = 10240 + 1024 + 10240
 
-        interaction_row_indices = [i for i, j in enumerate(serp['click_pattern']) if j == 1]
+        interaction_row_indices = [i for i, j in enumerate([0] + serp['click_pattern'][:-1]) if j == 1]
         rows.extend(interaction_row_indices)
         data.extend([1] * len(interaction_row_indices))
         cols.extend([interaction_index] * len(interaction_row_indices))
 
-        label_row_indices = [i for i, j in enumerate([0] + serp['click_pattern'][:-1]) if j == 1]
+        label_row_indices = [i for i, j in enumerate(serp['click_pattern']) if j == 1]
         rows.extend(label_row_indices)
         data.extend([1] * len(label_row_indices))
         cols.extend([interaction_index + 1] * len(label_row_indices))
