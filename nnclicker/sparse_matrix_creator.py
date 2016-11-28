@@ -60,7 +60,7 @@ class SparseMatrixGenerator:
         # Append qd vector indices and d indices for set 3
         for row, doc_id in enumerate(serp['doc_ids']):
             if representation_set == '3':
-                doc_indices.extend([val + 10240 + 1024 for val in self.docs[doc_id]])
+                doc_indices[doc_id].extend([val + 10240 + 1024 for val in self.docs[doc_id]])
             index_counts = {index: doc_indices[doc_id].count(index) for index in doc_indices[doc_id]}
             data.extend(index_counts.values())
             cols.extend(index_counts.keys())
