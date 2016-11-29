@@ -23,7 +23,7 @@ def run_experiment():
 
     # params
     sessions_start = 0
-    sessions_max = 10000
+    sessions_max = 100000
     repr_set = "1"
 
     if len(sys.argv) >= 3:
@@ -33,7 +33,7 @@ def run_experiment():
         repr_set = sys.argv[3]
 
     # files names
-    data_dir = "../data/"
+    data_dir = "../../../../data/"
     datafile = "train"
     session_name = "train_%s-%s.pickle" % (sessions_start, sessions_max)
     query_name = "query_docs_"+session_name
@@ -85,9 +85,6 @@ def run_experiment():
         logging.info("generating sparse matrixes...")
         sparse_matrix_gen.save_matrices_to_file(
             fname=data_dir+sparsematrix_name, representation_set=repr_set)
-
-    # LSTM
-
 
 if __name__ == "__main__":
     start_time = time.time()
