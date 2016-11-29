@@ -18,8 +18,26 @@ class Evaluation(object):
         pass
 
 
+class LogLikelihood(Evaluation):
+    def __init__(self):
+        pass
+
+    def evaluate(self, prediction_probabilities):
+        loglikelihood = 0
+
+        for i, probabilities_per_rank in enumerate(prediction_probabilities):
+            log_click_probs = [math.log(prob[0]) for prob in probabilities_per_rank]
+            loglikelihood += sum(log_click_probs) / len(log_click_probs)
+        loglikelihood /= len(prediction_probabilities)
+
+        return loglikelihood
+
+
 class Perplexity(Evaluation):
     # markovi heeft clickmodels i.p.v pred en search_session i.p.v labels
+    def __init__(self):
+        pass
+
     def evaluate(self, prediction_probabilities, labels):
         # Initialize empty array
 
