@@ -22,11 +22,19 @@ class LogLikelihood(Evaluation):
     def __init__(self):
         pass
 
-    def evaluate(self, prediction_probabilities):
+    def evaluate(self, prediction_probabilities, labels):
         loglikelihood = 0
 
         for i, probabilities_per_rank in enumerate(prediction_probabilities):
-            log_click_probs = [math.log(prob[0]) for prob in probabilities_per_rank]
+            label = labels[i]
+            for rank, click_prob in enumerate(probabilities_per_rank):
+                ps = []
+                if label[rank][0]:
+                    p = click_prob[0]
+                else:
+                    p = 1 - click_prob[0]
+                ps.append(p)
+            log_click_probs = [math.log(prob) for prob in ps]
             loglikelihood += sum(log_click_probs) / len(log_click_probs)
         loglikelihood /= len(prediction_probabilities)
 
