@@ -82,7 +82,7 @@ class NNclickParser(object):
         Function that writes list of search sessions to pickle file
         """
         with open(filename, "w") as f:
-            pickle.dump(self.sessions, f)
+            pickle.dump(self.sessions, f, -1)
 
     def write_query_docs(self, filename):
         """
@@ -92,7 +92,7 @@ class NNclickParser(object):
             pickle.dump({
                 'query_docs': self.query_docs,
                 'queries': self.queries,
-                'docs': self.docs}, f)
+                'docs': self.docs}, f, -1)
 
     def load_sessions(self, filename):
         """

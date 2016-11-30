@@ -91,4 +91,4 @@ class SparseMatrixGenerator:
         for query_id in self.queries.keys():
             sparse_matrices.extend(self.get_sparse_matrices(query_id, representation_set))
         with open(fname, 'w') as f:
-            pickle.dump(sparse_matrices, f)
+            pickle.dump(sparse_matrices, f, -1)

@@ -21,14 +21,14 @@ class LSTMNN(object):
     def __init__(self):
         self.tsteps = 1
         self.serp_len = 10
-        self.input_size = 10242
-        self.epochs = 500
+        self.input_size = 11266
+        self.epochs = 1
         self.num_hidden = 256
         self.num_output = 1
         self.batch_size = 64
-        self.train_size = 25000
+        self.train_size = 50000
         self.validation_size = 1000
-        self.test_size = 25000
+        self.test_size = 50000
         self.model = None
 
         self.data = None
@@ -37,7 +37,7 @@ class LSTMNN(object):
         self.validation_set = None
         self.test_set = None
 
-        self.data_file =  "../../../../data/sparse_matrix_set1_train_0-651728.pickle"
+        self.data_file =  "../data/sparse_matrix_set2_train_0-100000.pickle"
         self.weights_file = "lstm_weights_epoch_%d_train_size_%d.dat" % (
             self.epochs, self.train_size)
 
@@ -53,9 +53,8 @@ class LSTMNN(object):
         """
         Function that divides data into train and test sets
         """
-        self.train_set = self.data[:-(self.validation_size+self.test_size)]
-        self.validation_set = self.data[-(self.validation_size+self.test_size):
-                                        -self.test_size]
+        self.train_set = self.data[:self.train_size]
+        #self.validation_set = self.data[self.train_size:(self.train_size+self.validation_size)]
         self.test_set = self.data[-self.test_size:]
         del self.data
 
@@ -65,13 +64,10 @@ class LSTMNN(object):
         """
         print "Creating Model"
         self.model = Sequential()
-        self.model.add(TimeDistributed(Dense(self.num_hidden),
-                                       input_shape=(self.serp_len, self.input_size)))
-        self.model.add(LSTM(self.num_hidden, return_sequences=True))
+        self.model.add(LSTM(self.num_hidden, input_shape=(self.serp_len, self.input_size), return_sequences=True))
         self.model.add(TimeDistributed(Dense(self.num_output, activation="sigmoid")))
         optim = Adadelta(rho=0.95, epsilon=1e-06, clipvalue=1.)
-        self.model.compile(optimizer=optim, loss="binary_crossentropy",
-                           metrics=["accuracy"])
+        self.model.compile(optimizer=optim, loss="binary_crossentropy", metrics=["accuracy"])
         self.model.summary()
 
 
@@ -87,6 +83,15 @@ class LSTMNN(object):
             batch_X[i, :, 1:] = matrix[:, :-1]
             batch_y[i, :] = matrix[:, -1]
         return batch_X, batch_y
+
+    def get_train(self):
+        train_X = np.zeros((self.train_size, self.serp_len, self.input_size))
+        train_y = np.zeros((self.train_size, self.serp_len, self.num_output))
+        for (i, sparse) in enumerate(self.train_set):
+            matrix = sparse.todense()
+            train_X[i, :, 1:] = matrix[:, :-1]
+            train_y[i, :] = matrix[:, -1]
+        return train_X, train_y
 
     def get_val(self):
         """
@@ -111,14 +116,14 @@ class LSTMNN(object):
             test_X[i, :, 1:] = matrix[:, :-1]
             test_y[i, :] = matrix[:, -1]
         return test_X, test_y
-    
+
     def load_lstm(self):
         """
         Function that loads LSTM model when weights are already saved
         """
         if os.path.isfile(self.weights_file):
             print "Found weights file, loading weights..."
-            self.model.load_weights(self.weight_file)
+            self.model.load_weights(self.weights_file)
         else:
             print "Error: did not find weights file!"
 
@@ -129,16 +134,8 @@ class LSTMNN(object):
         """
         print "Training the model..."
         train_starttime = time.time()
-        for i in range(self.epochs):
-            print "Epoch: %d/%d" % (i+1, self.epochs)
-            train_X, train_y = self.get_batch_train()
-            val_X, val_y = self.get_val()
-            self.model.fit(train_X, train_y,
-                  validation_data=(val_X, val_y),
-                  batch_size=self.batch_size,
-                  nb_epoch=1,
-                  verbose=1,
-                  shuffle=True)
+        train_X, train_y = self.get_train()
+        self.model.fit(train_X, train_y, batch_size=self.batch_size, nb_epoch=self.epochs, verbose=1, shuffle=True)
         print "Trained LSTM model in: %f seconds" % (time.time() - train_starttime)
         print('Saving the model...')
         self.model.save_weights(self.weights_file, True)
@@ -147,26 +144,19 @@ class LSTMNN(object):
         """
         Function that evaluates lstm
         """
-        #evaluation = evaluate.Perplexity()
-        #test_X, test_y = self.get_test()
-        #pred_probs = self.model.predict_proba(test_X)
-        #perplexity, perplexity_rank = evaluation.evaluate(pred_probs, test_y)
-        #print pred_probs[0]
-        #print "Perplexity: %f" % perplexity
-        #print "Perplexity@rank: %s" % str(perplexity_rank)
-
         print "Evaluating the model..."
         test_X, test_y = self.get_test()
-        score = self.model.evaluate(test_X, test_y, verbose=1)
-        print "Log likelihood: %.3f" % np.log(score[0])
-        print "Accuracy: %.3f" % score[1]
         predict_probs = self.model.predict_proba(test_X)
-        print "Examples:"
-        for i in range(10):
-            print "%d------------------------------------" % i
-            print "Predicted: %s" % str(predict_probs[i])
-            print "Ground truth: %s" % str(test_y[i])
-            print "======================================"
+        loglike_eval = evaluate.LogLikelihood()
+        loglikelihood = loglike_eval.evaluate(predict_probs, test_y)
+        print "LogLikelihood: %f" % loglikelihood
+
+        # print "Examples:"
+        # for i in range(10):
+        #    print "%d------------------------------------" % i
+        #    print "Predicted: %s" % str(predict_probs[i])
+        #    print "Ground truth: %s" % str(test_y[i])
+        #    print "======================================"
 
 if __name__ == "__main__":
     start_time = time.time()

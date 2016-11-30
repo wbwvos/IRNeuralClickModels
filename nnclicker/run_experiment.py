@@ -33,7 +33,7 @@ def run_experiment():
         repr_set = sys.argv[3]
 
     # files names
-    data_dir = "../../../../data/"
+    data_dir = "../data/"
     datafile = "train"
     session_name = "train_%s-%s.pickle" % (sessions_start, sessions_max)
     query_name = "query_docs_"+session_name
