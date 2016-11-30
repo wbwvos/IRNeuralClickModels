@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import numpy as np
 __author__ = 'Wolf Vos, Casper Thuis, Alexander van Someren, Jeroen Rooijmans'
 
 
@@ -6,7 +7,7 @@ def get_index_from_click_pattern(click_pattern, location=1):
     """
     Function that returns index given a click pattern
     """
-    index = (location - 1) * 1024
+    index = (location) * 1024
     index += int(''.join([str(i) for i in click_pattern]), 2)
     return index
 

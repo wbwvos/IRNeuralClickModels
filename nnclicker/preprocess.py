@@ -16,7 +16,7 @@ class NNclickParser(object):
 
     def __init__(self):
         self.TOTAL_NUMBER_OF_QUERIES = 65172853
-        self.sessions = None
+        self.query_sessions = None
         self.query_docs = None
         self.queries = None
         self.docs = None
@@ -61,10 +61,8 @@ class NNclickParser(object):
                 session_id = entry_array[0]
                 query_id = entry_array[4]
                 doc_urls = [comb.split(",")[0] for comb in entry_array[6::]]
-                session = {}
-                session["query_id"] = query_id
-                session["doc_urls"] = doc_urls
-                session["click_pattern"] = click_pattern
+
+                session = {"query_id": query_id, "doc_urls": doc_urls, "click_pattern": click_pattern}
                 sessions.append(session)
 
             # if we have found a query, check if line is click action
@@ -72,8 +70,7 @@ class NNclickParser(object):
                 if entry_array[0] == session_id:
                     clicked_doc = entry_array[4]
                     if clicked_doc in doc_urls:
-                        index = doc_urls.index(clicked_doc)
-                        click_pattern[index] = 1
+                        click_pattern[doc_urls.index(clicked_doc)] = 1
         # store sessions
         self.sessions = sessions
 
@@ -100,8 +97,8 @@ class NNclickParser(object):
         """
         if os.path.isfile(filename):
             with open(filename, "rb") as f:
-                sessions = pickle.load(f)
-                self.sessions = sessions
+                query_sessions = pickle.load(f)
+                self.query_sessions = query_sessions
 
     def load_query_docs(self, filename):
         """
@@ -116,12 +113,12 @@ class NNclickParser(object):
         """
         Function that creates dictionaries to store the preprocessed data
         """
-        query_docs = {}
-        queries = {}
-        docs = {}
+        self.query_docs = {}
+        self.queries = {}
+        self.docs = {}
 
-        for query in self.sessions:
-            query_doc = query_docs.get(query["query_id"], {})
+        for query in self.query_sessions:
+            query_doc = self.query_docs.get(query["query_id"], {})
             serps = query_doc.get("serps", [])
             serps.append({
                 "doc_ids": query["doc_urls"],
@@ -129,28 +126,22 @@ class NNclickParser(object):
             })
             query_doc["serps"] = serps
 
-            # append index to query representation
-            l = queries.get(query["query_id"], [])
-            l.append(get_index_from_click_pattern(query["click_pattern"]))
-            queries[query["query_id"]] = l
+            # append index to query representation (for set 2)
+            query_indices = self.queries.get(query["query_id"], [])
+            query_indices.append(get_index_from_click_pattern(query["click_pattern"]))
+            self.queries[query["query_id"]] = query_indices
 
-            indices = 10 * [0]
             for (doc_location, doc_id) in enumerate(query["doc_urls"]):
-                index = get_index_from_click_pattern(query["click_pattern"],
-                                                     doc_location + 1)
-                indices[doc_location] = index
+                index = get_index_from_click_pattern(query["click_pattern"], doc_location)
 
                 # append index to query-document representation
-                doc_indices = query_doc.get(doc_id, [])
+                query_doc_indices = query_doc.get(doc_id, [])
+                query_doc_indices.append(index)
+                query_doc[doc_id] = query_doc_indices
+
+                # append index to document representation (for set 3)
+                doc_indices = self.docs.get(doc_id, [])
                 doc_indices.append(index)
-                query_doc[doc_id] = doc_indices
+                self.docs[doc_id] = doc_indices
 
-                # append index to document representation
-                l = docs.get(doc_id, [])
-                l.append(index)
-                docs[doc_id] = l
-
-            query_docs[query["query_id"]] = query_doc
-        self.query_docs = query_docs
-        self.queries = queries
-        self.docs = docs
+            self.query_docs[query["query_id"]] = query_doc
