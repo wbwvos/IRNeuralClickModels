@@ -2,6 +2,7 @@
 import numpy as np
 import time
 import os.path
+import sys
 import cPickle as pickle
 
 from keras.models import Sequential
@@ -21,14 +22,14 @@ class LSTMNN(object):
     def __init__(self):
         self.tsteps = 1
         self.serp_len = 10
-        self.input_size = 11266
-        self.epochs = 1
+        self.input_size = 10242
+        self.epochs = 100
         self.num_hidden = 256
         self.num_output = 1
         self.batch_size = 64
-        self.train_size = 50000
+        self.train_size = 7500
         self.validation_size = 1000
-        self.test_size = 50000
+        self.test_size = 2500
         self.model = None
 
         self.data = None
@@ -37,9 +38,20 @@ class LSTMNN(object):
         self.validation_set = None
         self.test_set = None
 
-        self.data_file =  "../data/sparse_matrix_set2_train_0-100000.pickle"
-        self.weights_file = "lstm_weights_epoch_%d_train_size_%d.dat" % (
+        self.data_file =  "../../../../data/sparse_matrix_set1_train_0-10000.pickle"
+        self.weights_file = "lstm_weights_epoch_%d_train_size_%d_set1.dat" % (
             self.epochs, self.train_size)
+	if len(sys.argv) == 2:
+	    if sys.argv[1] == "2":
+		self.input_size = 11266
+		self.data_file = "../../../../data/sparse_matrix_set2_train_0-10000.pickle"
+		self.weights_file = "lstm_weights_epoch_%d_train_size_%d_set2.dat" % (
+	    self.epochs, self.train_size)
+	    elif sys.argv[1] == "3":
+		self.input_size = 21506
+		self.data_file = "../../../../data/sparse_matrix_set3_train_0-10000.pickle"
+		self.weights_file = "lstm_weights_epoch_%d_train_size_%d_set3.dat" % (
+	    self.epochs, self.train_size)
 
     def load_data(self):
         """
@@ -151,8 +163,8 @@ class LSTMNN(object):
         loglikelihood = loglike_eval.evaluate(predict_probs, test_y)
         print "LogLikelihood: %f" % loglikelihood
 
-        # print "Examples:"
-        # for i in range(10):
+        #print "Examples:"
+        #for i in range(10):
         #    print "%d------------------------------------" % i
         #    print "Predicted: %s" % str(predict_probs[i])
         #    print "Ground truth: %s" % str(test_y[i])
