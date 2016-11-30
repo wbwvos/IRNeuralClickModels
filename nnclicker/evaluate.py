@@ -1,5 +1,7 @@
 from abc import abstractmethod
 import math
+import numpy as np
+import itertools
 
 
 class Evaluation(object):
@@ -27,9 +29,9 @@ class LogLikelihood(Evaluation):
 
         for i, probabilities_per_rank in enumerate(prediction_probabilities):
             label = [l[0] for l in labels[i]]
-            probabilities_per_ra = [p[0] for p in probabilities_per_rank]
+            probabilities_per_rank = [p[0] for p in probabilities_per_rank]
             ps = []
-            for rank, click_prob in enumerate(probabilities_per_ra):
+            for rank, click_prob in enumerate(probabilities_per_rank):
                 if label[rank]:
                     p = click_prob
                 else:
@@ -37,6 +39,7 @@ class LogLikelihood(Evaluation):
                 ps.append(p)
             log_click_probs = [math.log(prob) for prob in ps]
             loglikelihood += sum(log_click_probs)
+        print "Length prediction_probabilities: " + str(len(prediction_probabilities))
         loglikelihood /= len(prediction_probabilities)
 
         return loglikelihood
@@ -49,28 +52,40 @@ class Perplexity(Evaluation):
 
     def evaluate(self, prediction_probabilities, labels):
         # Initialize empty array
+        perplexity_per_rank = [0.0] * 10  # Could give an error when labels increase
 
-        perplexity_at_rank = [0.0] * 10  # Could give an error when labels increase
+        for i, probabilities_per_rank in enumerate(prediction_probabilities):
+            clicks = [item for sublist in labels[i] for item in sublist]
+            probabilities = [item for sublist in probabilities_per_rank for item in sublist]
+            for rank, probability in enumerate(probabilities):
+                lst = [list(l) for l in list(itertools.product([0, 1], repeat=rank))]
+                for previous_prob in prediction_probabilities[:rank]:
+                    pass
 
-        for i, probability in enumerate(prediction_probabilities):
-            label = labels[i]
-            for rank, click_prob in enumerate(probability):
-                if label[rank][0]:
-                    p = click_prob[0]
-                else:
-                    p = 1 - click_prob[0]
-                perplexity_at_rank[rank] += math.log(p, 2)
+        perplexity_per_rank = [2 ** (-rank_perplexity / len(prediction_probabilities)) for rank_perplexity in
+                               perplexity_per_rank]
+        perplexity = sum(perplexity_per_rank) / 10
 
-        perplexity_at_rank = [2 ** (-rank / len(prediction_probabilities)) for rank in perplexity_at_rank]
-        perplexity = sum(perplexity_at_rank) / len(perplexity_at_rank)
+        return perplexity, perplexity_per_rank
 
-        return perplexity, perplexity_at_rank
+
+#
+# class Evaluator:
+#
+#     def model_perplexity(self, predictions, clicks, is_training,batch_size,validation_size):
+#         prediction = tf.add(tf.mul(predictions, clicks), tf.mul(tf.sub(1.0, clicks), tf.sub(1.0, predictions)))
+#         norm = tf.cond(is_training, lambda:tf.div(-1.0, tf.to_float(batch_size)), lambda:tf.div(-1.0, tf.to_float(validation_size)))
+#         sum_log = tf.reduce_sum(tf.div(tf.log(prediction), tf.log(2.0)), 0)
+#         perplexity = tf.reduce_mean(tf.pow(2.0, tf.mul(norm, sum_log)))
+#         tf.scalar_summary('perplexity', perplexity)
+#         return perplexity
 
 
 if __name__ == "__main__":
     Evaluation = Perplexity()
-    pred = [[[0.00001], [.00001]], [[.000001], [.00001]], [[.00001], [.0001]]]
-    labels = [[[1], [1]], [[1], [1]], [[1], [1]]]
+    pred = [[[0.6], [.01], [.000001], [.00001], [.00001], [.0001], [.0001], [.0001], [.0001], [.0001]],
+            [[0.6], [.01], [.000001], [.00001], [.00001], [.0001], [.0001], [.0001], [.0001], [.0001]]]
+    labels = [[[1], [0], [0], [0], [0], [0], [0], [0], [0], [0]], [[1], [0], [0], [0], [0], [0], [0], [0], [0], [0]]]
     #     pred = [[0.5],[0.5],[0.5],[0.5],[0.5],[0.5],[0.5],[0.5],[0.5],[0.5]]
     #     labels = [[1],[0],[1],[0],[1],[0],[1],[0],[1],[0]]
     p, _ = Evaluation.evaluate(pred, labels)
