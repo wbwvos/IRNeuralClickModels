@@ -46,7 +46,7 @@ def run_experiment():
     # session preprocessing
     if os.path.isfile(data_dir+session_name):
         logging.info("found session file: %s" % (data_dir+session_name))
-        if not parser.sessions:
+        if not parser.query_sessions:
             logging.info("loading session file...")
             parser.load_sessions(data_dir+session_name)
     else:
@@ -64,7 +64,7 @@ def run_experiment():
             logging.info("loading query docs file...")
             parser.load_query_docs(data_dir+query_name)
     else:
-        if not parser.sessions:
+        if not parser.query_sessions:
             logging.info("loading session file...")
             parser.load_sessions(data_dir+session_name)
         logging.info("parsing query docs from file: %s" % (

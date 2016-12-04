@@ -3,6 +3,7 @@ import os.path
 import cPickle as pickle
 
 from utils import get_index_from_click_pattern
+from utils import dict_batch_writer
 
 __author__ = 'Wolf Vos, Casper Thuis, Alexander van Someren, Jeroen Rooijmans'
 
@@ -85,11 +86,9 @@ class NNclickParser(object):
         """
         Function that writes query doc dicts to pickle file
         """
-        with open(filename, "w") as f:
-            pickle.dump({
-                'query_docs': self.query_docs,
-                'queries': self.queries,
-                'docs': self.docs}, f, -1)
+        dict_batch_writer(self.query_docs, filename + "-qd")
+        dict_batch_writer(self.queries, filename + "-q")
+        dict_batch_writer(self.docs, filename + "-d")
 
     def load_sessions(self, filename):
         """
