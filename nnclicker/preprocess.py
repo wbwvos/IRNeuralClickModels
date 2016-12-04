@@ -47,7 +47,7 @@ class NNclickParser(object):
         session_id = None
 
         for line in sessions_file:
-            if sessions_max and sessions_max <= len(sessions):
+            if sessions_max and (sessions_max-sessions_start) <= len(sessions):
                 break
 
             entry_array = line.strip().split("\t")
