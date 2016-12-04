@@ -38,18 +38,28 @@ class LSTMNN(object):
         self.validation_set = None
         self.test_set = None
 
-        self.data_file =  "../../../../data/sparse_matrix_set1_train_0-10000.pickle"
+        # check data folder
+        if(os.path.exists('../../../../data')):
+            # on server
+            self.data_dir = '../../../../data'
+        elif(os.path.exists('../data')):
+            # on laptop
+            self.data_dir = '../data'
+        else:
+            print 'Data dir not found at ../data or ../../../../data'
+
+        self.data_file =  self.data_dir + "/sparse_matrix_set1_train_0-8000.pickle"
         self.weights_file = "lstm_weights_epoch_%d_train_size_%d_set1.dat" % (
             self.epochs, self.train_size)
 	if len(sys.argv) == 2:
 	    if sys.argv[1] == "2":
 		self.input_size = 11266
-		self.data_file = "../../../../data/sparse_matrix_set2_train_0-10000.pickle"
+		self.data_file = self.data_dir + "/sparse_matrix_set2_train_0-10000.pickle"
 		self.weights_file = "lstm_weights_epoch_%d_train_size_%d_set2.dat" % (
 	    self.epochs, self.train_size)
 	    elif sys.argv[1] == "3":
 		self.input_size = 21506
-		self.data_file = "../../../../data/sparse_matrix_set3_train_0-10000.pickle"
+		self.data_file = self.data_dir + "/sparse_matrix_set3_train_0-10000.pickle"
 		self.weights_file = "lstm_weights_epoch_%d_train_size_%d_set3.dat" % (
 	    self.epochs, self.train_size)
 
@@ -95,6 +105,24 @@ class LSTMNN(object):
             batch_X[i, :, 1:] = matrix[:, :-1]
             batch_y[i, :] = matrix[:, -1]
         return batch_X, batch_y
+
+    def get_batch_pickle(self, batch_dir='/batches/'):
+        """
+        Function that reads train batch of given size
+        """
+        files = os.listdir(self.data_dir + batch_dir)
+        for fname in files:
+            with open(self.data_dir + batch_dir + fname, 'rb') as f:
+                batch_data = pickle.load(f)
+                batch_X = np.zeros((len(batch_data), self.serp_len, self.input_size))
+                batch_y = np.zeros((len(batch_data), self.serp_len, self.num_output))
+                for (i, j) in enumerate(range(len(batch_data))):
+                    matrix = batch_data[j].todense()
+                    batch_X[i, :, 1:] = matrix[:, :-1]
+                    batch_y[i, :] = matrix[:, -1]
+                yield batch_X, batch_y
+                del matrix, batch_X, batch_y, batch_data
+
 
     def get_train(self):
         train_X = np.zeros((self.train_size, self.serp_len, self.input_size))
