@@ -1,15 +1,17 @@
 #!/usr/bin/env python
 import cPickle as pickle
+import glob
+
+import progressbar
 from scipy.sparse import csr_matrix
-from utils import dict_batch_reader
+from utils import dict_batch_reader, list_batch_writer
 
 __author__ = 'Wolf Vos, Casper Thuis, Alexander van Someren, Jeroen Rooijmans'
 
 
 class SparseMatrixGenerator:
     def __init__(self, fname):
-
-        self.query_dicts = dict_batch_reader(fname + "-qd")
+        self.query_dicts = {}
         self.queries = dict_batch_reader(fname + "-q")
         self.docs = dict_batch_reader(fname + "-d")
 
@@ -79,6 +81,7 @@ class SparseMatrixGenerator:
         return csr_matrix((data, (rows, cols)), shape=(10, interaction_index + 2))
 
     def save_matrices_to_file(self, fname='sparse_matrices.cpickle', representation_set='1'):
+        self.query_dicts = dict_batch_reader(fname + "-qd")
         sparse_matrices = []
         for query_id in self.queries.keys():
             sparse_matrices.extend(self.get_sparse_matrices(query_id, representation_set))
@@ -87,7 +90,13 @@ class SparseMatrixGenerator:
 
     def save_matrices_to_files(self, fname='sparse_matrices.cpickle', representation_set='1'):
         sparse_matrices = []
-        for query_id in self.queries.keys():
+
+        # filenames = glob.glob(fname + "-qd" + "/*.pickle")
+
+        bar = progressbar.ProgressBar(maxval=len(self.queries.keys()),
+                                      widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
+        print "Creating matrices..."
+        for query_id in bar(self.queries.keys()):
             sparse_matrices.extend(self.get_sparse_matrices(query_id, representation_set))
-        with open(fname, 'w') as f:
-            pickle.dump(sparse_matrices, f, -1)
+        print "Writing matrices..."
+        list_batch_writer(fname + "_set_" + representation_set, sparse_matrices, batch_size=64)
