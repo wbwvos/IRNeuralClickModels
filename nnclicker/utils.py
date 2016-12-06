@@ -68,7 +68,7 @@ def dict_batch_reader(fname):
     return dictionary
 
 
-def list_batch_writer(fname, output_list, batch_size=64):
+def list_batch_writer(fname, output_list, batch_size=64, extra_postfix=''):
     print "Batch writing " + fname + "..."
 
     if not os.path.exists(fname):
@@ -90,6 +90,6 @@ def list_batch_writer(fname, output_list, batch_size=64):
         if end > total_size:
             end = total_size
 
-        with open(os.path.join(fname, str(batch_number) + ".pickle"), 'w') as f:
+        with open(os.path.join(fname, extra_postfix + "-" + str(batch_number) + ".pickle"), 'w') as f:
             pickle.dump(output_list[start:end], f, -1)
     print "Done. Succesfully wrote " + str(batch_number) + " batches of size " + str(batch_size) + "."
