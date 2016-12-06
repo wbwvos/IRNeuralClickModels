@@ -51,7 +51,7 @@ def dict_batch_writer(dictionary, fname, number_of_batches=10):
         start = total_size / number_of_batches * batch_number
         end = total_size / number_of_batches * (batch_number + 1)
         with open(os.path.join(fname, str(batch_number) + ".pickle"), 'w') as f:
-            pickle.dump({key: dictionary.pop(key) for key in dictionary.keys()[start:end]}, f, -1)
+            pickle.dump({key: dictionary[key] for key in dictionary.keys()[start:end]}, f, -1)
     print "Done. Succesfully wrote " + str(batch_number + 1) + " batches."
 
 
