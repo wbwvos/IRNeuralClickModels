@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import cPickle as pickle
 import glob
+import pprint
 
 import progressbar
 from scipy.sparse import csr_matrix
@@ -12,6 +13,7 @@ __author__ = 'Wolf Vos, Casper Thuis, Alexander van Someren, Jeroen Rooijmans'
 class SparseMatrixGenerator:
     def __init__(self, fname):
         self.query_dicts = {}
+        self.filename = fname
         self.queries = dict_batch_reader(fname + "-q")
         self.docs = dict_batch_reader(fname + "-d")
 
@@ -89,14 +91,36 @@ class SparseMatrixGenerator:
             pickle.dump(sparse_matrices, f, -1)
 
     def save_matrices_to_files(self, fname='sparse_matrices.cpickle', representation_set='1'):
-        sparse_matrices = []
 
-        # filenames = glob.glob(fname + "-qd" + "/*.pickle")
+        print 'HALLLOOOO!!!'
+        sparse_matrices = []
+        batch_size = 64
+
+        filenames = glob.glob(self.filename + "-qd" + "/*.pickle")
+        print filenames
+
+        for filename in filenames:
+            print "Opening " + filename
+            with open(filename, 'r') as f:
+                self.query_dicts = pickle.load(f)
+            print "Creating sparse matrices for " + str(len(self.query_dicts)) + " queries"
+            for query_id in self.query_dicts.keys():
+                sparse_matrices.extend(self.get_sparse_matrices(query_id, representation_set))
+
+            print "Size sparse matrices: " + str(len(sparse_matrices))
+            print "Writing " + str(len(sparse_matrices) / batch_size - 1) + " batches of size " + str(
+                batch_size) + "..."
+            number_of_batches = len(sparse_matrices) / batch_size
+            number_matrices_to_write = number_of_batches * batch_size
+            if number_of_batches > 0:
+                list_batch_writer(fname, sparse_matrices[0:number_matrices_to_write], batch_size=batch_size)
+                del sparse_matrices[0:number_matrices_to_write]
+
 
         bar = progressbar.ProgressBar(maxval=len(self.queries.keys()),
                                       widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
-        print "Creating matrices..."
-        for query_id in bar(self.queries.keys()):
-            sparse_matrices.extend(self.get_sparse_matrices(query_id, representation_set))
-        print "Writing matrices..."
-        list_batch_writer(fname + "_set_" + representation_set, sparse_matrices, batch_size=64)
+        # print "Creating matrices..."
+        # for query_id in bar(self.queries.keys()):
+        #     sparse_matrices.extend(self.get_sparse_matrices(query_id, representation_set))
+        # print "Writing matrices..."
+        # list_batch_writer(fname + "_set_" + representation_set, sparse_matrices, batch_size=64)

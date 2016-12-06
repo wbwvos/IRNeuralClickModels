@@ -59,10 +59,10 @@ def dict_batch_reader(fname):
     print "Batch reading " + fname + "..."
     filenames = glob.glob(fname + "/*.pickle")
 
-    bar = progressbar.ProgressBar(maxval=len(filenames),
-                                  widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
+    # bar = progressbar.ProgressBar(maxval=len(filenames),
+    #                               widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
     dictionary = {}
-    for filename in bar(filenames):
+    for filename in filenames:
         with open(filename, 'r') as f:
             dictionary.update(pickle.load(f))
     return dictionary
@@ -78,6 +78,7 @@ def list_batch_writer(fname, output_list, batch_size=64):
             if exc.errno != errno.EEXIST:
                 raise
     total_size = len(output_list)
+    print "Total size: " + str(total_size)
 
     bar = progressbar.ProgressBar(maxval=total_size / batch_size,
                                   widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
