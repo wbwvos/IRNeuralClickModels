@@ -27,6 +27,7 @@ class SparseMatrixGenerator:
         sparse_matrices = []
         doc_indices = self.query_dicts[query_id]
         serps = doc_indices.pop('serps')
+        print len(serps)
 
         q_indices = []
         data = []
@@ -107,6 +108,7 @@ class SparseMatrixGenerator:
                                           widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
 
             for query_id in bar(self.query_dicts):
+                print query_id, ":", len(self.query_dicts[query_id])
                 sparse_matrices.extend(self.get_sparse_matrices(query_id, representation_set))
 
             print "Size sparse matrices: " + str(len(sparse_matrices))
