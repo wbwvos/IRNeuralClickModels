@@ -17,11 +17,8 @@ class NNclickParser(object):
 
     def __init__(self):
         self.TOTAL_NUMBER_OF_QUERIES = 65172853
-        self.query_sessions = None
-        self.query_docs = None
-        self.queries = None
-        self.docs = None
-        self.users = None
+        self.user_dict = {}
+        self.user_indices_dict = {}
 
     def parse(self, session_filename, sessions_start=None, sessions_max=None):
         """
@@ -44,11 +41,12 @@ class NNclickParser(object):
         if not set, all search sessions are parsed and returned
         """
         sessions_file = open(session_filename, "r")
-        sessions = []
         session_id = None
+        user_dict = {}
 
+        sessions = 0
         for line in sessions_file:
-            if sessions_max and (sessions_max-sessions_start) <= len(sessions):
+            if sessions_max and (sessions_max - sessions_start) <= sessions:
                 break
 
             entry_array = line.strip().split("\t")
@@ -59,19 +57,17 @@ class NNclickParser(object):
 
             if len(entry_array) <= 5 and entry_array[1] == "M":
                 user_id = entry_array[3]
+                if session_id is not None:
+                    user_dict[user_id] = current_user_list
+                current_user_list = []
 
             # check if line is query action
             if len(entry_array) >= 6 and entry_array[2] == "Q":
                 click_pattern = 10 * [0]
                 session_id = entry_array[0]
-                query_id = entry_array[4]
                 doc_urls = [comb.split(",")[0] for comb in entry_array[6::]]
-
-                session = {"query_id": query_id,
-                           "doc_urls": doc_urls,
-                           "click_pattern": click_pattern,
-                           "user_id": user_id}
-                sessions.append(session)
+                sessions += 1
+                current_user_list.append(click_pattern)
 
             # if we have found a query, check if line is click action
             if session_id and len(entry_array) == 5 and entry_array[2] == "C":
@@ -79,80 +75,52 @@ class NNclickParser(object):
                     clicked_doc = entry_array[4]
                     if clicked_doc in doc_urls:
                         click_pattern[doc_urls.index(clicked_doc)] = 1
-
-        # store sessions
-        self.sessions = sessions
+        self.user_dict = user_dict
 
     def write_sessions(self, filename):
         """
         Function that writes list of search sessions to pickle file
         """
+        print "Writing " + filename
         with open(filename, "w") as f:
-            pickle.dump(self.sessions, f, -1)
+            pickle.dump(self.user_dict, f, -1)
 
-    def write_query_docs(self, filename):
+    def write_user_indices_dict(self, filename):
         """
         Function that writes query doc dicts to pickle file
         """
-        # print "Number of documents: " + str(len(self.docs))
-        dict_batch_writer(self.query_docs, filename + "-qd")
-        dict_batch_writer(self.queries, filename + "-q")
-        dict_batch_writer(self.docs, filename + "-d")
+        print "Number of users: " + str(len(self.user_indices_dict))
+        dict_batch_writer(self.user_indices_dict, filename + "-u")
 
-    def load_sessions(self, filename):
-        """
-        Function that loads list of search sessions from pickle file
-        """
-        if os.path.isfile(filename):
-            with open(filename, "rb") as f:
-                query_sessions = pickle.load(f)
-                self.query_sessions = query_sessions
+    # def load_sessions(self, filename):
+    #     """
+    #     Function that loads list of search sessions from pickle file
+    #     """
+    #     if os.path.isfile(filename):
+    #         with open(filename, "rb") as f:
+    #             query_sessions = pickle.load(f)
+    #             self.query_sessions = query_sessions
 
-    def load_query_docs(self, filename):
+    def load_user_dict(self, filename):
         """
         Function that loads dics with query documents from pickle file
         """
         if os.path.isfile(filename):
             with open(filename, "rb") as f:
-                query_docs = pickle.load(f)
-                self.query_docs = query_docs
+                user_dict = pickle.load(f)
+                self.user_dict = user_dict
 
-    def create_data_dicts(self):
+    def create_user_indices_dict(self):
         """
         Function that creates dictionaries to store the preprocessed data
         """
-        self.query_docs = {}
-        self.queries = {}
-        self.docs = {}
+        self.user_indices_dict = {}
 
-        for query in self.query_sessions:
-            query_doc = self.query_docs.get(query["query_id"], {})
-            serps = query_doc.get("serps", [])
-            serps.append({
-                "doc_ids": query["doc_urls"],
-                "click_pattern": query["click_pattern"]
-            })
-            query_doc["serps"] = serps
+        print "len self.user_dict: ", self.user_dict
+        for user_id in self.user_dict:
+            user_indices = self.user_indices_dict.get(user_id, [])
 
-            # append index to query representation (for set 2)
-            query_indices = self.queries.get(query["query_id"], [])
-            query_indices.append(get_index_from_click_pattern(query["click_pattern"]))
-            self.queries[query["query_id"]] = query_indices
+            for click_pattern in self.user_dict[user_id]:
+                user_indices.append(get_index_from_click_pattern(click_pattern))
 
-            # append user id
-            query_doc['user_id'] = query['user_id']
-
-            for (doc_location, doc_id) in enumerate(query["doc_urls"]):
-                index = get_index_from_click_pattern(query["click_pattern"], doc_location)
-
-                # append index to query-document representation
-                query_doc_indices = query_doc.get(doc_id, [])
-                query_doc_indices.append(index)
-                query_doc[doc_id] = query_doc_indices
-
-                # append index to document representation (for set 3)
-                doc_indices = self.docs.get(doc_id, [])
-                doc_indices.append(index)
-                self.docs[doc_id] = doc_indices
-
-            self.query_docs[query["query_id"]] = query_doc
+            self.user_indices_dict[user_id] = user_indices

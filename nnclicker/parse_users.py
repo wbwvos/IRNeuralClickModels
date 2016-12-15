@@ -1,0 +1,99 @@
+#!/usr/bin/env python
+import os
+import time
+import logging
+import sys
+
+import preprocess_u
+from sparse_matrix_creator import SparseMatrixGenerator
+
+__author__ = 'Wolf Vos, Casper Thuis, Alexander van Someren, Jeroen Rooijmans'
+
+# create logger
+logging.basicConfig(filename='experiment.log', filemode='w',
+                    format='%(asctime)s %(message)s',
+                    stream=sys.stdout, level=logging.INFO)
+
+
+def run_experiment():
+    """
+    Function that runs NNclickParser experiment, data is preprocessed if
+    needed, resulting in the sparse matrixes that are fed to the lstm
+    """
+
+    # params
+    sessions_start = 0
+    sessions_max = 100000
+
+    if len(sys.argv) >= 3:
+        sessions_start = int(sys.argv[1])
+        sessions_max = int(sys.argv[2])
+    # if len(sys.argv) == 4:
+    #     repr_set = sys.argv[3]
+
+    # files names
+    data_dir = "../data/"
+    if os.path.exists('/data'):
+        data_dir = "/data/"
+    datafile = "train"
+    session_name = "train_user_%s-%s.pickle" % (sessions_start, sessions_max)
+    user_dict_name = "user_" + session_name
+
+    # create parser
+    logging.info("creating NNclickParser...")
+    parser = preprocess_u.NNclickParser()
+
+    # session preprocessing
+
+    # print("parsing session %d to %d from file: %s" % (
+    #     sessions_start, sessions_max, data_dir+datafile))
+    parser.parse(data_dir + datafile, sessions_start=sessions_start,
+                 sessions_max=sessions_max)
+    logging.info("writing session file: %s" % data_dir + session_name)
+    parser.write_sessions(data_dir + session_name)
+    parser.load_user_dict(data_dir + session_name)
+
+    parser.create_user_indices_dict()
+    parser.write_user_indices_dict(data_dir + user_dict_name)
+
+    # parser.load_sessions(data_dir + session_name)
+
+    # # query docs preprocessing
+    # if os.path.exists(data_dir+query_name):
+    #     logging.info("found query docs file: %s" % (data_dir+query_name))
+    #     if not parser.query_docs:
+    #         logging.info("loading query docs file...")
+    #         parser.load_query_docs(data_dir+query_name)
+    # else:
+    #     if not parser.query_sessions:
+    #         logging.info("loading session file...")
+    #         parser.load_sessions(data_dir+session_name)
+    #     logging.info("parsing query docs from file: %s" % (
+    #         data_dir+session_name))
+    #     parser.create_data_dicts()
+    #     logging.info("deleting parser.sessions from memory...")
+    #     # del parser.sessions
+    #     logging.info("writing query docs file: %s" % (data_dir+query_name))
+    #     parser.write_query_docs(data_dir+query_name)
+
+    # sparse matrix preprocessing
+    # if os.path.exists(data_dir + sparsematrix_name):
+    #     logging.info("found sparse matrix file: %s" % (
+    #         data_dir+sparsematrix_name))
+    #     print "found sparse matrix file: %s" % (
+    #         data_dir + sparsematrix_name)
+    # else:
+    #     logging.info("creating SparseMatrixGenerator...")
+    #     print "creating SparseMatrixGenerator..."
+    #     sparse_matrix_gen = SparseMatrixGenerator(fname=data_dir+query_name)
+    #     logging.info("generating sparse matrixes...")
+    #     sparse_matrix_gen.save_matrices_to_files(
+    #         fname=data_dir+sparsematrix_name, representation_set=repr_set)
+
+
+if __name__ == "__main__":
+    start_time = time.time()
+    logging.info("starting experiment...")
+    run_experiment()
+    duration = time.time() - start_time
+    logging.info("completed experiment! (duration: %f)" % duration)

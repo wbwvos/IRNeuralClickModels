@@ -62,6 +62,7 @@ def dict_batch_reader(fname):
     # bar = progressbar.ProgressBar(maxval=len(filenames),
     #                               widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
     dictionary = {}
+    print filenames
     for filename in filenames:
         with open(filename, 'r') as f:
             dictionary.update(pickle.load(f))
