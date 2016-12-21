@@ -2,6 +2,8 @@ from abc import abstractmethod
 import math
 import numpy as np
 import itertools
+import lstm
+import progressbar
 
 
 class Evaluation(object):
@@ -21,11 +23,15 @@ class Evaluation(object):
 
 
 class LogLikelihood(Evaluation):
+    """
+    depricated, keras evalution is used for loglikelihood
+    """
     def __init__(self):
         pass
 
     def evaluate(self, prediction_probabilities, labels):
         loglikelihood = 0.0
+        eps = 1e-10
 
         for i, probabilities_per_rank in enumerate(prediction_probabilities):
             label = [l[0] for l in labels[i]]
@@ -37,55 +43,103 @@ class LogLikelihood(Evaluation):
                 else:
                     p = 1 - click_prob
                 ps.append(p)
-            log_click_probs = [math.log(prob) for prob in ps]
-            loglikelihood += sum(log_click_probs)
-        print "Length prediction_probabilities: " + str(len(prediction_probabilities))
+            log_click_probs = [math.log(prob+eps) for prob in ps]
+            loglikelihood += sum(log_click_probs)  #TODO: CHECK OF WE DOOR 10 MOETEN DELEN!!!!
         loglikelihood /= len(prediction_probabilities)
 
         return loglikelihood
 
-
 class Perplexity(Evaluation):
-    # markovi heeft clickmodels i.p.v pred en search_session i.p.v labels
     def __init__(self):
         pass
 
     def evaluate(self, prediction_probabilities, labels):
-        # Initialize empty array
-        perplexity_per_rank = [0.0] * 10  # Could give an error when labels increase
+        # epsilon
+        eps = 1e-10
+        # init perplexity per rank array
+        perplexity_per_rank = 10*[0.]
+        for i, pred in enumerate(prediction_probabilities):
+            for j in range(len(perplexity_per_rank)):
+                #print i,j, prediction_probabilities[i][j], labels[i][j]
+                # if click
+                if labels[i][j] == [0.]:
+                    p = 1-(prediction_probabilities[i][j])
+                else:
+                    p = prediction_probabilities[i][j]
+                perplexity_per_rank[j] += math.log(p, 2)
+        perpl = 0
+        #for perp in perplexity_per_rank:
+        #    perpl += 2**(-perp/float(len(prediction_probabilities)))
+        #perplexity = perpl/10.
+        #perplexity_at_rank = np.array(perplexity_per_rank)/float(len(prediction_probabilities))
+        perplexity_at_rank = [2 ** (-x / len(prediction_probabilities)) for x in perplexity_per_rank]
+        perplexity = sum(perplexity_at_rank) / len(perplexity_per_rank)
 
-        for i, probabilities_per_rank in enumerate(prediction_probabilities):
-            clicks = [item for sublist in labels[i] for item in sublist]
-            probabilities = [item for sublist in probabilities_per_rank for item in sublist]
-            for rank, probability in enumerate(probabilities):
-                lst = [list(l) for l in list(itertools.product([0, 1], repeat=rank))]
-                for previous_prob in prediction_probabilities[:rank]:
-                    pass
+        return perplexity, perplexity_at_rank
 
-        perplexity_per_rank = [2 ** (-rank_perplexity / len(prediction_probabilities)) for rank_perplexity in
-                               perplexity_per_rank]
-        perplexity = sum(perplexity_per_rank) / 10
+class ConditionalPerplexity(Evaluation):
+    def __init__(self):
+        pass
 
-        return perplexity, perplexity_per_rank
+    def evaluate(self, batch_X, batch_y, lstmnn):
+        lst = np.array([np.array(list(reversed(l))) for l in list(
+            itertools.product([[0.], [1.]], repeat=9))])
+        lst = np.concatenate([np.zeros([512,1,1]), lst], axis=1)
+        lst = np.reshape(lst, [512,10])
 
+        TOTAL_RANKS = 10
+        NUM_SERPS = batch_y.shape[0]
+        perplexity_at_rank = [0.0] * TOTAL_RANKS
 
-#
-# class Evaluator:
-#
-#     def model_perplexity(self, predictions, clicks, is_training,batch_size,validation_size):
-#         prediction = tf.add(tf.mul(predictions, clicks), tf.mul(tf.sub(1.0, clicks), tf.sub(1.0, predictions)))
-#         norm = tf.cond(is_training, lambda:tf.div(-1.0, tf.to_float(batch_size)), lambda:tf.div(-1.0, tf.to_float(validation_size)))
-#         sum_log = tf.reduce_sum(tf.div(tf.log(prediction), tf.log(2.0)), 0)
-#         perplexity = tf.reduce_mean(tf.pow(2.0, tf.mul(norm, sum_log)))
-#         tf.scalar_summary('perplexity', perplexity)
-#         return perplexity
+        # bar = progressbar.ProgressBar(maxval=NUM_SERPS,
+        #                           widgets=[progressbar.Bar('=', '[', ']'), ' ',
+        #                                    progressbar.Counter()])
 
+        for s in range(NUM_SERPS):
+            #print s
+            data = batch_X[s]
+
+            data = np.reshape(data, (1, 10, batch_X.shape[2]))
+            labels = batch_y[s]
+
+            data_m = np.tile(data.copy(), [512,1,1])
+            data_m[:,:,-1] = lst
+            probability = np.reshape(lstmnn.model.predict_proba(data_m, verbose=0).T, [10,512])
+            probs = [[],[]]
+            probs[0] = 1.0 - probability
+            probs[1] = probability
+            ppr = [0.] * TOTAL_RANKS
+            for i in xrange(TOTAL_RANKS):
+                if i == 0:
+                    label = int(labels[i])
+                    inter = np.zeros([2])
+                    inter[0] = probs[0][0,i]
+                    inter[1] = probs[1][0,i]
+                    ppr[i] = inter[label]
+                    prev_inter = inter.copy()
+                else:
+                    label = int(labels[i])
+                    dims = [2] * (i + 1)
+                    inter = np.zeros(dims)
+                    c = 0.0
+                    for idx in [list(reversed(l)) for l in list(itertools.product([0, 1], repeat=i+1))]:
+                        inter[tuple(idx)] = probs[idx[0]][i, int(c)] * prev_inter[tuple(idx[1:])]
+                        c += 0.5
+                    ppr[i] = float(label) * np.sum(inter[1]) + float(1-label) * np.sum(inter[0])
+                    prev_inter = inter.copy()
+            for rank, click_prob in enumerate(ppr):
+                perplexity_at_rank[rank] += math.log(click_prob, 2)
+
+        perplexity_at_rank = [2 ** (-x / NUM_SERPS) for x in perplexity_at_rank]
+        perplexity = sum(perplexity_at_rank) / len(perplexity_at_rank)
+        return perplexity, perplexity_at_rank
 
 if __name__ == "__main__":
-    Evaluation = Perplexity()
-    pred = [[[0.6], [.01], [.000001], [.00001], [.00001], [.0001], [.0001], [.0001], [.0001], [.0001]],
-            [[0.6], [.01], [.000001], [.00001], [.00001], [.0001], [.0001], [.0001], [.0001], [.0001]]]
-    labels = [[[1], [0], [0], [0], [0], [0], [0], [0], [0], [0]], [[1], [0], [0], [0], [0], [0], [0], [0], [0], [0]]]
-    #     pred = [[0.5],[0.5],[0.5],[0.5],[0.5],[0.5],[0.5],[0.5],[0.5],[0.5]]
-    #     labels = [[1],[0],[1],[0],[1],[0],[1],[0],[1],[0]]
-    p, _ = Evaluation.evaluate(pred, labels)
+    evaluator = ConditionalPerplexity()
+    data_dir = "../data/sparse_matrix_set1_train_0-500000.pickle/"
+    lstmnn_init = lstm.LSTMNN()
+    lstmnn_init.create_model()
+    batch_itr = lstmnn_init.get_batch_pickle(data_dir)
+    for step, (batch_X, batch_y) in enumerate(batch_itr):
+        evaluator.evaluate(batch_X, batch_y)
+        break

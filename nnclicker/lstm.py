@@ -4,6 +4,7 @@ import time
 import os.path
 import sys
 import cPickle as pickle
+import progressbar
 
 from keras.models import Sequential
 from keras.layers import Dense, LSTM, TimeDistributed
@@ -23,22 +24,21 @@ class LSTMNN(object):
         self.tsteps = 1
         self.serp_len = 10
         self.input_size = 10242
-        self.epochs = 100
+        self.epochs = 5
         self.num_hidden = 256
         self.num_output = 1
         self.batch_size = 64
-        self.train_size = 7500
+        self.train_size = 500000
         self.validation_size = 1000
-        self.test_size = 2500
+        self.test_size = 100000
         self.model = None
-
         self.data = None
         self.data_size = None
         self.train_set = None
         self.validation_set = None
         self.test_set = None
-
         self.print_step = 100
+        self.train = False
 
         # check data folder
         if(os.path.exists('../../../../data')):
@@ -50,37 +50,40 @@ class LSTMNN(object):
         else:
             print 'Data dir not found at ../data or ../../../../data'
 
-        self.data_file =  self.data_dir + "/sparse_matrix_set1_train_0-8000.pickle"
+        self.train_dir = self.data_dir + "/sparse_matrix_set1_train_0-500000.pickle/"
+        self.test_dir = self.data_dir + "/sparse_matrix_set1_train_500000-600000.pickle/"
         self.weights_file = "lstm_weights_epoch_%d_train_size_%d_set1.dat" % (
             self.epochs, self.train_size)
-	if len(sys.argv) == 2:
-	    if sys.argv[1] == "2":
-		self.input_size = 11266
-		self.data_file = self.data_dir + "/sparse_matrix_set2_train_0-10000.pickle"
-		self.weights_file = "lstm_weights_epoch_%d_train_size_%d_set2.dat" % (
-	    self.epochs, self.train_size)
-	    elif sys.argv[1] == "3":
-		self.input_size = 21506
-		self.data_file = self.data_dir + "/sparse_matrix_set3_train_0-10000.pickle"
-		self.weights_file = "lstm_weights_epoch_%d_train_size_%d_set3.dat" % (
-	    self.epochs, self.train_size)
 
-    def load_data(self):
-        """
-        Function that loads data from data pickle
-        """
-        with open(self.data_file, "rb") as f:
-            self.data = pickle.load(f)
-        #self.data_size = len(self.data)
+        if len(sys.argv) >= 2:
+            if sys.argv[1] == "2":
+                self.input_size = 11266
+                self.train_dir = self.data_dir + "/sparse_matrix_set2_train_0-500000.pickle/"
+                self.test_dir = self.data_dir + "/sparse_matrix_set2_train_500000-600000.pickle/"
+                self.weights_file = "lstm_weights_epoch_%d_train_size_%d_set2.dat" % (
+                    self.epochs, self.train_size)
 
-    def get_data_sets(self):
-        """
-        Function that divides data into train and test sets
-        """
-        self.train_set = self.data[:self.train_size]
-        #self.validation_set = self.data[self.train_size:(self.train_size+self.validation_size)]
-        self.test_set = self.data[-self.test_size:]
-        del self.data
+            elif sys.argv[1] == "3":
+                self.input_size = 21506
+                self.train_dir = self.data_dir + "/sparse_matrix_set3_train_0-500000.pickle/"
+                self.test_dir = self.data_dir + "/sparse_matrix_set3_train_500000-600000.pickle/"
+                self.weights_file = "lstm_weights_epoch_%d_train_size_%d_set3.dat" % (
+                    self.epochs, self.train_size)
+
+            elif sys.argv[1] == "4":
+                self.input_size = 22530
+                self.train_dir = self.data_dir + "/sparse_matrix_set4_train_0-500000.pickle/"
+                self.test_dir = self.data_dir + "/sparse_matrix_set4_train_500000-600000.pickle/"
+                self.weights_file = "lstm_weights_epoch_%d_train_size_%d_set4.dat" % (
+                    self.epochs, self.train_size)
+
+        if len(sys.argv) == 3:
+            if sys.argv[2] == "train":
+                self.train = True
+            elif sys.argv[2] == "eval":
+                self.train = False
+            else:
+                print "pass argument \"train\" to train lstm or \"eval\" to evaluate lstm"
 
     def create_model(self):
         """
@@ -88,33 +91,20 @@ class LSTMNN(object):
         """
         print "Creating Model"
         self.model = Sequential()
-        self.model.add(LSTM(self.num_hidden, input_shape=(self.serp_len, self.input_size), return_sequences=True))
+        self.model.add(LSTM(self.num_hidden, input_shape=(self.serp_len, self.input_size),
+                            return_sequences=True))
         self.model.add(TimeDistributed(Dense(self.num_output, activation="sigmoid")))
         optim = Adadelta(rho=0.95, epsilon=1e-06, clipvalue=1.)
         self.model.compile(optimizer=optim, loss="binary_crossentropy", metrics=["accuracy"])
         self.model.summary()
 
-
-    def get_batch_train(self):
+    def get_batch_pickle(self, data_dir):
         """
-        Function that creates random train batch of given size
+        Function that reads batches from given data_dir
         """
-        batch_X = np.zeros((self.train_size, self.serp_len, self.input_size))
-        batch_y = np.zeros((self.train_size, self.serp_len, self.num_output))
-        for (i, j) in enumerate(np.random.choice(len(self.train_set),
-                                                     self.train_size, replace=False)):
-            matrix = self.train_set[j].todense()
-            batch_X[i, :, 1:] = matrix[:, :-1]
-            batch_y[i, :] = matrix[:, -1]
-        return batch_X, batch_y
-
-    def get_batch_pickle(self, batch_dir='/batches/'):
-        """
-        Function that reads train batch of given size
-        """
-        files = os.listdir(self.data_dir + batch_dir)
+        files = os.listdir(data_dir)
         for fname in files:
-            with open(self.data_dir + batch_dir + fname, 'rb') as f:
+            with open(data_dir + fname, 'rb') as f:
                 batch_data = pickle.load(f)
                 batch_X = np.zeros((len(batch_data), self.serp_len, self.input_size))
                 batch_y = np.zeros((len(batch_data), self.serp_len, self.num_output))
@@ -125,40 +115,6 @@ class LSTMNN(object):
                 yield batch_X, batch_y
                 del matrix, batch_X, batch_y, batch_data
 
-
-    def get_train(self):
-        train_X = np.zeros((self.train_size, self.serp_len, self.input_size))
-        train_y = np.zeros((self.train_size, self.serp_len, self.num_output))
-        for (i, sparse) in enumerate(self.train_set):
-            matrix = sparse.todense()
-            train_X[i, :, 1:] = matrix[:, :-1]
-            train_y[i, :] = matrix[:, -1]
-        return train_X, train_y
-
-    def get_val(self):
-        """
-        Function that creates validation set from sparse matrixes
-        """
-        val_X = np.zeros((self.validation_size, self.serp_len, self.input_size))
-        val_y = np.zeros((self.validation_size, self.serp_len, self.num_output))
-        for (i, sparse) in enumerate(self.validation_set):
-            matrix = sparse.todense()
-            val_X[i, :, 1:] = matrix[:, :-1]
-            val_y[i, :] = matrix[:, -1]
-        return val_X, val_y
-
-    def get_test(self):
-        """
-        Funciton that creates test set from sparse matrixes
-        """
-        test_X = np.zeros((self.test_size, self.serp_len, self.input_size))
-        test_y = np.zeros((self.test_size, self.serp_len, self.num_output))
-        for (i, sparse) in enumerate(self.test_set):
-            matrix = sparse.todense()
-            test_X[i, :, 1:] = matrix[:, :-1]
-            test_y[i, :] = matrix[:, -1]
-        return test_X, test_y
-
     def load_lstm(self):
         """
         Function that loads LSTM model when weights are already saved
@@ -166,21 +122,9 @@ class LSTMNN(object):
         if os.path.isfile(self.weights_file):
             print "Found weights file, loading weights..."
             self.model.load_weights(self.weights_file)
+            print "Weights loaded!", self.weights_file
         else:
             print "Error: did not find weights file!"
-
-
-    def train_lstm(self):
-        """
-        Function that trains LSTM model
-        """
-        print "Training the model..."
-        train_starttime = time.time()
-        train_X, train_y = self.get_train()
-        self.model.fit(train_X, train_y, batch_size=self.batch_size, nb_epoch=self.epochs, verbose=1, shuffle=True)
-        print "Trained LSTM model in: %f seconds" % (time.time() - train_starttime)
-        print('Saving the model...')
-        self.model.save_weights(self.weights_file, True)
 
     def train_batch_lstm(self):
         """
@@ -189,54 +133,76 @@ class LSTMNN(object):
         print "Training the model..."
         train_starttime = time.time()
 
-        # self.data_dir moet dus wel kloppen
-        batch_iterator = self.get_batch_pickle(self.data_dir)
-
         # loop over epochs
         for epoch in range(self.epochs):
             #loop over steps
-            for step, train_X, train_y in enumerate(batch_iterator):
-                #train on one batch
-                train_acc = self.model.train_on_batch(train_X, train_y)
+            batch_iterator = self.get_batch_pickle(self.train_dir)
 
+            for step, (train_X, train_y) in enumerate(batch_iterator):
+                #train on one batch
+                perf_measures = self.model.train_on_batch(train_X, train_y)
                 #print step
                 if (step + 1) % self.print_step == 0 or step == 0:
-                    print "Epoch: " + str(epoch + 1) + " train acc " + train_acc
+                    print "Epoch: ", str(epoch + 1), "step", str(step+1), "train loss: ", perf_measures[0], 'time: ', time.time() - train_starttime
             print "Epoch: " + str(epoch + 1)
-            #evaluate on test/val set
-            self.evaluate_lstm()
+            print("Save temporary model")
+            self.model.save_weights("TEMP_EPOCH_"+ str(epoch+1)+"_"+self.weights_file, True)
 
-        #we could also use this git_generator function, but im not sure if it will work correctly. It looks exactly like what we need but lets figure that out another time
-        #self.model.fit_generator(batch_iterator, self.batch_size, self.epoch, verbose=1) # validation_data=None) deze kunnen jullie nog toevoegen
 
         print "Trained LSTM model in: %f seconds" % (time.time() - train_starttime)
         print('Saving the model...')
         self.model.save_weights(self.weights_file, True)
 
-    def evaluate_lstm(self):
+    def evaluate_batch_lstm(self):
         """
-        Function that evaluates lstm
+        Function that evaluates lstm on test batches
         """
-        print "Evaluating the model..."
-        test_X, test_y = self.get_test()
-        predict_probs = self.model.predict_proba(test_X)
-        loglike_eval = evaluate.LogLikelihood()
-        loglikelihood = loglike_eval.evaluate(predict_probs, test_y)
-        print "LogLikelihood: %f" % loglikelihood
+        num_batches = 1500
 
-        #print "Examples:"
-        #for i in range(10):
-        #    print "%d------------------------------------" % i
-        #    print "Predicted: %s" % str(predict_probs[i])
-        #    print "Ground truth: %s" % str(test_y[i])
-        #    print "======================================"
+        for directory in [self.train_dir, self.test_dir]:
+            test_starttime = time.time()
+            batch_iterator = self.get_batch_pickle(directory)
+            bar = progressbar.ProgressBar(maxval=num_batches,
+                                      widgets=[progressbar.Bar('=', '[', ']'), ' ',
+                                               progressbar.Percentage()])
+            perplexity_evaluator  = evaluate.Perplexity()
+            cperplexity_evaluator = evaluate.ConditionalPerplexity()
+
+            # loop over batches
+            logsum = 0.
+            perpsum = 0.
+            #cperpsum = 0.
+            #cppr_sum = np.zeros([10])
+            ppr_sum = np.zeros([10])
+            for step, (test_X, test_y) in bar(enumerate(batch_iterator)):
+                if step == num_batches:
+                    break
+                logsum += self.model.evaluate(test_X, test_y, batch_size=64, verbose=0)[0]
+                perp, perplexity_at_rank = perplexity_evaluator.evaluate(self.model.predict_proba(test_X, batch_size=64, verbose=0), test_y)
+                #cperp, cperplexity_per_rank = cperplexity_evaluator.evaluate(test_X, test_y, self)
+                perpsum += perp
+                #cperpsum += cperp
+                ppr_sum += perplexity_at_rank
+                #cppr_sum += cperplexity_per_rank
+
+            meanlog = logsum/float(num_batches)
+            #meancperp = cperpsum/float(num_batches)
+            #mean_cppr = cppr_sum/float(num_batches)
+            meanperp = perpsum/float(num_batches)
+            mean_ppr = ppr_sum/float(num_batches)
+            print directory
+            print 'perplexity_per_rank', mean_ppr
+            #print 'conditional perplexity_per_rank', mean_cppr
+            # print "Step: %d: Mean LogLikelihood: -%.3f, Perplexity: %.3f, Conditional Perplexity: %.3f. Duration: %.2f" % (
+            #     step, meanlog, meanperp, meancperp, (time.time()-test_starttime))
+            print "Step: %d: Mean LogLikelihood: -%.3f, Perplexity: %.3f. Duration: %.2f" % (
+                step, meanlog, meanperp, (time.time()-test_starttime))
 
 if __name__ == "__main__":
-    start_time = time.time()
     lstmnn = LSTMNN()
-    lstmnn.load_data()
-    lstmnn.get_data_sets()
     lstmnn.create_model()
-    #lstmnn.train_lstm()
-    lstmnn.train_batch_lstm()
-    lstmnn.evaluate_lstm()
+    if lstmnn.train:
+        lstmnn.train_batch_lstm()
+    else:
+        lstmnn.load_lstm()
+        lstmnn.evaluate_batch_lstm()
